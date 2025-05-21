@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.2.2 (Python 3.13.2 on darwin)" generated="2025-05-21T22:04:37.046255" rpa="false" schemaversion="5">
+<suite id="s1" name="Tests" source="/Users/jaleb/Documents/Werk/3. Projecten/robotframework-realtimelogger/tests">
+<suite id="s1-s1" name="Example" source="/Users/jaleb/Documents/Werk/3. Projecten/robotframework-realtimelogger/tests/example.robot">
+<test id="s1-s1-t1" name="Example Test Passes" line="5">
+<kw name="Log" owner="BuiltIn">
+<msg time="2025-05-21T22:04:37.081554" level="INFO">This is a passing test.</msg>
+<arg>This is a passing test.</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="PASS" start="2025-05-21T22:04:37.081481" elapsed="0.000101"/>
+</kw>
+<kw name="Sleep" owner="BuiltIn">
+<msg time="2025-05-21T22:04:42.083107" level="INFO">Slept 5 seconds.</msg>
+<arg>5s</arg>
+<doc>Pauses the test executed for the given time.</doc>
+<status status="PASS" start="2025-05-21T22:04:37.081656" elapsed="5.001601"/>
+</kw>
+<status status="PASS" start="2025-05-21T22:04:37.075433" elapsed="5.008057"/>
+</test>
+<test id="s1-s1-t2" name="Example Test Fails" line="9">
+<kw name="Fail" owner="BuiltIn">
+<msg time="2025-05-21T22:04:42.090344" level="FAIL">This test is meant to fail.</msg>
+<arg>This test is meant to fail.</arg>
+<doc>Fails the test with the given message and optionally alters its tags.</doc>
+<status status="FAIL" start="2025-05-21T22:04:42.090204" elapsed="0.000227">This test is meant to fail.</status>
+</kw>
+<status status="FAIL" start="2025-05-21T22:04:42.087544" elapsed="0.003030">This test is meant to fail.</status>
+</test>
+<status status="FAIL" start="2025-05-21T22:04:37.073614" elapsed="5.019459"/>
+</suite>
+<status status="FAIL" start="2025-05-21T22:04:37.067699" elapsed="5.025677"/>
+</suite>
+<statistics>
+<total>
+<stat pass="1" fail="1" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat name="Tests" id="s1" pass="1" fail="1" skip="0">Tests</stat>
+<stat name="Example" id="s1-s1" pass="1" fail="1" skip="0">Tests.Example</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>
