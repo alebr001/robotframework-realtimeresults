@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "realtimelogger"
+version = "0.1.0"
+description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
+authors = ["Jouw Naam <jouw@email.com>"]
+license = "MIT"
+packages = [
+    { include = "realtimelogger" },
+    { include = "backend" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fastapi = "^0.115.0"
+uvicorn = "^0.34.0"
+requests = "^2.31.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
