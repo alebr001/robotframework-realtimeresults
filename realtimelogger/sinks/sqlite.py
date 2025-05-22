@@ -17,6 +17,7 @@ class SqliteSink(EventSink):
                     timestamp TEXT,
                     event_type TEXT,
                     name TEXT,
+                    suite TEXT,
                     status TEXT,
                     message TEXT
                 )
@@ -24,16 +25,19 @@ class SqliteSink(EventSink):
             conn.commit()
 
     def handle_event(self, event_type, data):
+        print(f"[SQLITE] Received event: {event_type} → {data.get('name')}")
+        print(f"[DEBUG] Using SQLite DB: {self.database_path}")
         """Insert a single event into the database."""
         with sqlite3.connect(self.database_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO events (timestamp, event_type, name, status, message)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO events (timestamp, event_type, name, suite, status, message)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 data.get("timestamp"),
                 data.get("event_type"),
                 str(data.get("name")),
+                str(data.get("suite")),
                 data.get("status"),
                 data.get("message")
             ))

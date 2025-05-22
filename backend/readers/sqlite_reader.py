@@ -1,7 +1,7 @@
 # backend/sqlite_reader.py
 import sqlite3
 from .event_reader import EventReader
-from backend.helpers.config_loader import load_config
+from helpers.config_loader import load_config
 
 class SqliteEventReader(EventReader):
     def __init__(self, database_path="eventlog.db"):
@@ -11,12 +11,12 @@ class SqliteEventReader(EventReader):
         with sqlite3.connect(self.database_path) as conn:
             cursor = conn.cursor()
             rows = cursor.execute("""
-                SELECT timestamp, event_type, name, status, message
+                SELECT timestamp, event_type, name, suite, status, message
                 FROM events
                 ORDER BY timestamp ASC
                 LIMIT 100
             """).fetchall()
-            return [dict(zip(["timestamp", "event_type", "name", "status", "message"], row)) for row in rows]
+            return [dict(zip(["timestamp", "event_type", "name", "suite", "status", "message"], row)) for row in rows]
         
     def clear_events(self):
         config = load_config()

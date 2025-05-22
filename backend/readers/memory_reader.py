@@ -1,5 +1,5 @@
 # backend/memory_reader.py
-from .memory_sink import event_store
+from ..memory_store import event_store
 from .event_reader import EventReader
 
 class MemoryEventReader(EventReader):

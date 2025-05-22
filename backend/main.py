@@ -1,8 +1,7 @@
-import os
-import sqlite3
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import RedirectResponse
 
-from backend.helpers.config_loader import load_config
+from helpers.config_loader import load_config
 from backend.readers.memory_reader import MemoryEventReader
 from backend.readers.sqlite_reader import SqliteEventReader
 from realtimelogger.sinks.sqlite import SqliteSink
@@ -38,8 +37,13 @@ def get_events():
 
 @app.get("/events/clear")
 def clear_events():
-    return event_provider.clear_events()
+    event_provider.clear_events()
+    return RedirectResponse(url="/events", status_code=303)
 
 @app.get("/")
 def index():
     return {"message": "RealtimeLogger API is running", "endpoints": ["/events", "/event (POST)"]}
+
+@app.get("/favicon.ico")
+def favicon():
+    return Response(status_code=204)
