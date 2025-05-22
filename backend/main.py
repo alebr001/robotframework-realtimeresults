@@ -3,11 +3,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from helpers.config_loader import load_config
-from backend.readers.memory_reader import MemoryEventReader
 from backend.readers.sqlite_reader import SqliteEventReader
 from realtimelogger.sinks.sqlite import SqliteSink
 from backend.sinks.memory_sqlite import MemorySqliteSink
-# from realtimelogger.sinks.memory import MemorySink
 
 app = FastAPI()
 
