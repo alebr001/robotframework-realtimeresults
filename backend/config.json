@@ -1,4 +1,0 @@
-{
-    "sink_type": "sqlite",
-    "sqlite_path": "eventlog.db"
-  }

@@ -1,0 +1,6 @@
+{
+    "sink_type": "memory",
+    "sqlite_path": "eventlog.db",
+    "debug": true,
+    "log_level": "info"
+  }
