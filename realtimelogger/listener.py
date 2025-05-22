@@ -1,8 +1,8 @@
 ## realtimelogger/listener.py
 import requests
 from helpers.config_loader import load_config
+from realtimelogger.sinks.http import HttpSink
 from realtimelogger.sinks.loki import LokiSink  # Temp, later this wil be dynamic
-from realtimelogger.sinks.memory import MemorySink
 from realtimelogger.sinks.sqlite import SqliteSink
 
 # from backend.memory_sink import store_event
@@ -17,28 +17,35 @@ class RealTimeLogger:
         self.sink_type = self.config.get("sink_type", "none").lower()
         # self.debug = self.config.get("debug", "false") == "true"
 
+        strategy = self.config.get("sink_strategy", "local")
+
         try:
-            if self.sink_type == "loki":
-                self.endpoint = self.config.get("endpoint", "http://localhost:3100")
-                self.sink = LokiSink(endpoint=self.endpoint)
-            elif self.sink_type == "memory":
-                self.sink = MemorySink()
-            elif self.sink_type == "sqlite":
-                self.sink = SqliteSink(database_path=self.config.get("database_path", "eventlog.db"))
-            elif self.sink_type == "none":
-                self.sink = None
+            if strategy == "http":
+                if self.sink_type == "loki":
+                    self.endpoint = self.config.get("endpoint", "http://localhost:3100")
+                    self.sink = LokiSink(endpoint=self.endpoint)
+                elif self.sink_type == "sqlite":
+                    self.sink = HttpSink(endpoint=self.config.get("endpoint", "http://localhost:8000/event"))
+                else:
+                    raise ValueError(f"Unsupported sink_type: {self.sink_type}")
+            elif strategy == "local":
+                if self.sink_type == "sqlite":
+                    self.sink = SqliteSink(database_path=self.config.get("database_path", "eventlog.db"))
+                elif self.sink_type == "none":
+                    self.sink = None
+                else:
+                    raise ValueError(f"Unsupported sink_type: {self.sink_type}")
             else:
-                raise ValueError(f"Sink type '{self.sink_type}' wordt niet ondersteund")
+                raise ValueError(f"Unsupported sink strategy '{strategy}'")
         except Exception as e:
-            print(f"[WARN] Sink '{self.sink_type}' initialisatie faalde ({e}), fallback naar MemorySink.")
-            self.sink = MemorySink()
+            print(f"[WARN] Sink '{self.sink_type}' initialisatie failed ({e}), no sink selected.")
+            self.sink = None
 
     def _send_event(self, event_type, **kwargs):
         event = {
-            'event_type': event_type,
             **kwargs
             }
-        
+         
         # Push naar backend API
         if self.sink_type == "memory":
             try:

@@ -1,6 +1,9 @@
 {
-    "sink_type": "memory",
-    "sqlite_path": "eventlog.db",
-    "debug": true,
-    "log_level": "info"
+  "sink_strategy": "local",
+  "loki_endpoint": "http://localhost:3100",
+  "local_endpoint": "http://localhost:8000/event",
+  "sink_type": "sqlite",
+  "sqlite_path": "eventlog.db",
+  "debug": true,
+  "log_level": "info"
   }
