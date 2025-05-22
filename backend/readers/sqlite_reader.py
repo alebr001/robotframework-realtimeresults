@@ -13,7 +13,7 @@ class SqliteEventReader(EventReader):
             rows = cursor.execute("""
                 SELECT timestamp, event_type, name, status, message
                 FROM events
-                ORDER BY timestamp DESC
+                ORDER BY timestamp ASC
                 LIMIT 100
             """).fetchall()
             return [dict(zip(["timestamp", "event_type", "name", "status", "message"], row)) for row in rows]
