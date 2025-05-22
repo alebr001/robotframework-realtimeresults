@@ -177,7 +177,7 @@ cython_debug/
 #robotframework
 log.html
 output.html
-reports.html
+report.html
 *.db
 
 #os
