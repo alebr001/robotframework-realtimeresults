@@ -7,6 +7,7 @@ from realtimelogger.sinks.sqlite import SqliteSink
 from backend.sinks.memory_sqlite import MemorySqliteSink
 from helpers.config_loader import load_config
 from helpers.logger import setup_logging
+from fastapi.staticfiles import StaticFiles
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
 
 app = FastAPI()
+app.mount("/dashboard", StaticFiles(directory="backend/static", html=True), name="static")
 
 sink_type = config.get("sink_type", "sqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
