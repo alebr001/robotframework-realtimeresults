@@ -2,7 +2,7 @@
 name = "realtimelogger"
 version = "0.1.0"
 description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
-authors = ["Jouw Naam <jouw@email.com>"]
+authors = ["Jurgen Alebregtse j.alebregtse@proton.me"]
 license = "MIT"
 packages = [
     { include = "realtimelogger" },
@@ -14,7 +14,6 @@ python = "^3.9"
 fastapi = "^0.115.0"
 uvicorn = "^0.34.0"
 requests = "^2.31.0"
-sse-starlette = "^2.3.5"
 
 [tool.poetry.group.dev.dependencies]
 robotframework = "^7.2.2"
