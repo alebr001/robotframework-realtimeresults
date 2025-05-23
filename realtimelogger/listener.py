@@ -4,21 +4,29 @@ from helpers.config_loader import load_config
 from realtimelogger.sinks.http import HttpSink
 from realtimelogger.sinks.loki import LokiSink  # Temp, later this wil be dynamic
 from realtimelogger.sinks.sqlite import SqliteSink
-
-# from backend.memory_sink import store_event
+from helpers.logger import setup_logging
+import logging
 
 class RealTimeLogger:
     ROBOT_LISTENER_API_VERSION = 3
 
     def __init__(self, config_str=None):
+        logger = logging.getLogger(__name__)
+        config = load_config()
+        setup_logging(config.get("log_level_listener", "warn"))
+ 
+        logger.info("----------------")
+        logger.info("Started listener")
+        logger.info("----------------")
+
         file_config = load_config()  # {"sink_type": "sqlite", "debug": false}
         cli_config = self._parse_config(config_str)
         self.config = {**file_config, **cli_config}
+
         self.sink_type = self.config.get("sink_type", "none").lower()
         # self.debug = self.config.get("debug", "false") == "true"
 
         strategy = self.config.get("sink_strategy", "local")
-
         try:
             if strategy == "http":
                 if self.sink_type == "loki":
@@ -43,6 +51,7 @@ class RealTimeLogger:
 
     def _send_event(self, event_type, **kwargs):
         event = {
+            "event_type": event_type,
             **kwargs
             }
          
@@ -54,7 +63,7 @@ class RealTimeLogger:
                 print(f"[WARN] Backend push faalde: {e}")
         elif self.sink is not None:
             try:
-                self.sink.handle_event(event_type, event)
+                self.sink.handle_event(event) 
             except Exception as e:
                 print(f"[ERROR] Event handling failed: {e}")
         else:

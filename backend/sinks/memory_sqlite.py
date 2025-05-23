@@ -17,7 +17,7 @@ class MemorySqliteSink:
         """
         return self.conn
     
-    def handle_event(self, event_type, data):
+    def handle_event(self, data):
         cursor = self.conn.cursor()
         cursor.execute(INSERT_EVENT, (
             data.get("timestamp"),

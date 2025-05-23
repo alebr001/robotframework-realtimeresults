@@ -5,6 +5,7 @@ from helpers.sql_definitions import CREATE_EVENTS_TABLE, INSERT_EVENT
 
 class SqliteSink(EventSink):
     def __init__(self, database_path="eventlog.db"):
+        super().__init__()
         self.database_path = Path(database_path)
         self._initialize_database()
 
@@ -15,9 +16,8 @@ class SqliteSink(EventSink):
             cursor.execute(CREATE_EVENTS_TABLE)
             conn.commit()
 
-    def handle_event(self, event_type, data):
-        print(f"[SQLITE] Received event: {event_type} → {data.get('name')}")
-        print(f"[DEBUG] Using SQLite DB: {self.database_path}")
+    def _handle_event(self, data):
+        self.logger.debug(f"[SQLITE] Received event: {data.get('event_type')} → {data.get('name')}")
         """Insert a single event into the database."""
         with sqlite3.connect(self.database_path) as conn:
             cursor = conn.cursor()
