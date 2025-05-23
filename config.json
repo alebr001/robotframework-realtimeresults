@@ -4,6 +4,6 @@
   "local_endpoint": "http://localhost:8000/event",
   "sink_type": "sqlite",
   "sqlite_path": "eventlog.db",
-  "debug": true,
-  "log_level": "info"
+  "log_level": "debug",
+  "log_level_listener": "info"
   }
