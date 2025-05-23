@@ -22,6 +22,7 @@ class SqliteSink(EventSink):
         with sqlite3.connect(self.database_path) as conn:
             cursor = conn.cursor()
             cursor.execute(INSERT_EVENT, (
+                data.get("testid"),
                 data.get("timestamp"),
                 data.get("event_type"),
                 str(data.get("name")),

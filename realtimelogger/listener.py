@@ -70,21 +70,28 @@ class RealTimeLogger:
             print(f"[DEBUG] No sink configured for sink_type='{self.sink_type}' — event ignored.")
 
     def start_test(self, name, attrs):
+        test_id = f"{attrs.longname}::{attrs.starttime}"
         self._send_event(
             "start_test",
-            name=name.name,
-            suite=attrs.longname.split(".")[:-1],
-            tags=[str(tag) for tag in attrs.tags],
-            timestamp=str(attrs.starttime)
+            testid=test_id,
+            name=attrs.name,
+            longname=attrs.longname,
+            suite=attrs.longname.split('.')[0],
+            tags=attrs.tags,
+            timestamp=attrs.starttime
+
         )
 
     def end_test(self, name, attrs):
+        test_id = f"{attrs.longname}::{attrs.starttime}"
         self._send_event(
             "end_test",
+            testid=test_id,
             name=name.name,
-            suite=attrs.longname.split(".")[:-1],
+            suite = ".".join(attrs.longname.split(".")[:-1]),
             status=str(attrs.status),
             message=str(attrs.message),
+            elapsed = attrs.elapsedtime / 1000 if hasattr(attrs, "elapsedtime") else None,
             timestamp=str(attrs.endtime),
             tags=[str(tag) for tag in attrs.tags]
         )

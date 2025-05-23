@@ -20,6 +20,7 @@ class MemorySqliteSink:
     def handle_event(self, data):
         cursor = self.conn.cursor()
         cursor.execute(INSERT_EVENT, (
+            data.get("testid"),
             data.get("timestamp"),
             data.get("event_type"),
             str(data.get("name")),
@@ -30,15 +31,3 @@ class MemorySqliteSink:
             ",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags")
         ))
         self.conn.commit()
-
-    # def get_events(self):
-    #     cursor = self.conn.cursor()
-    #     cursor.execute("SELECT * FROM events")
-    #     rows = cursor.fetchall()
-    #     columns = [col[0] for col in cursor.description]
-    #     return [dict(zip(columns, row)) for row in rows]
-
-    # def clear(self):
-    #     cursor = self.conn.cursor()
-    #     cursor.execute("DELETE FROM events")
-    #     self.conn.commit()
