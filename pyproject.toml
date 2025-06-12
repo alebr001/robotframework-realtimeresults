@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "realtimeresults"
-version = "0.1.0"
+version = "0.2.0"
 description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
 authors = ["Jurgen Alebregtse j.alebregtse@proton.me"]
 license = "MIT"
@@ -22,3 +22,6 @@ pytest = "^8.0.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+rt-robot = "realtimeresults.cli:main"
