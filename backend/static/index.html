@@ -2,22 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>RealtimeLogger Dashboard</title>
+    <title>RealtimeResults Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- <style>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+            background-color: #f9f9f9;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
         #statusChart {
             width: 100%;
             height: 40vh;
+            max-height: 400px;
             display: block;
         }
-    </style> -->
+
+        button {
+            margin-bottom: 2rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
 <body>
     <h1>Realtime Test Result Overview</h1>
-    <canvas id="statusChart" style="display: block; width: 100%; height: 60vh;"></canvas>
+    <div id="elapsed-container">
+    <strong>Totale tijd:</strong> <span id="elapsed-display">0s</span>
+    </div>
+
+    <canvas id="statusChart"></canvas>
+
     <button onclick="clearEvents()">Clear events</button>
+
     <h2>Mislukte tests</h2>
-    <table id="failTable" border="1">
+    <table id="failTable">
         <thead>
             <tr>
                 <th>Tijdstip</th>
@@ -28,6 +76,7 @@
         </thead>
         <tbody></tbody>
     </table>
+
     <script>
         let chart;
 
@@ -35,14 +84,14 @@
             const response = await fetch("/events/clear");
             if (response.ok) {
                 console.log("Events cleared");
-                await pollForUpdates(); 
+                await pollForUpdates();
             } else {
                 console.error("Failed to clear events");
             }
         }
 
         async function fetchEvents() {
-            const response = await fetch('/events');
+            const response = await fetch("/events");
             return await response.json();
         }
 
@@ -57,16 +106,11 @@
         }
 
         function updateChartData(data) {
-            console.log("updateChartData() called");
-            const statuses = Object.keys(data);
             const counts = Object.values(data);
             const maxCount = Math.max(...counts);
             const newMax = Math.ceil((maxCount + 1) / 5) * 5;
-            console.log("DEBUG newMax y-axis:", newMax);  // ⬅️ hier
 
-
-            // Update chart data
-            chart.data.labels = statuses;
+            chart.data.labels = Object.keys(data);
             chart.data.datasets[0].data = counts;
 
             chart.options.scales.y = {
@@ -83,9 +127,8 @@
 
         function updateFailTable(events) {
             const tableBody = document.querySelector("#failTable tbody");
-            tableBody.innerHTML = ""; // leegmaken
+            tableBody.innerHTML = "";
 
-            // Filter alleen end_test events met FAIL status
             const failures = events.filter(e => e.event_type === "end_test" && e.status === "FAIL");
 
             for (const fail of failures) {
@@ -93,7 +136,7 @@
 
                 const timeCell = document.createElement("td");
                 timeCell.textContent = fail.timestamp || "(geen tijd)";
-                
+
                 const nameCell = document.createElement("td");
                 nameCell.textContent = fail.name;
 
@@ -128,26 +171,50 @@
                 },
                 options: {
                     responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        min: 0,
-                        // suggestedMax: 10,
-                        ticks: {
-                            precision: 0, // voorkom decimalen
-                            stepSize: 1   // dwing stapgrootte af
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                stepSize: 1
+                            }
                         }
                     }
                 }
-                }
             });
+        }
+
+        let suiteStartTime = null;
+        let suiteEndTime = null;
+
+        function extractSuiteTimestamps(events) {
+            const startSuite = events.find(e => e.event_type === "start_suite");
+            const endSuite = events.find(e => e.event_type === "end_suite");
+
+            if (startSuite) suiteStartTime = new Date(startSuite.timestamp);
+            if (endSuite) suiteEndTime = new Date(endSuite.timestamp);
+        }
+
+        function updateElapsedTime() {
+            const display = document.getElementById("elapsed-display");
+            if (!suiteStartTime) {
+                display.textContent = "—";
+                return;
+            }
+
+            const now = suiteEndTime ? suiteEndTime : new Date();
+            const seconds = Math.floor((now - suiteStartTime) / 1000);
+            display.textContent = `${seconds}s`;
         }
 
         async function pollForUpdates() {
             const events = await fetchEvents();
             const grouped = groupByStatus(events);
             updateChartData(grouped);
-            updateFailTable(events); 
+            updateFailTable(events);
+
+            extractSuiteTimestamps(events);
+            updateElapsedTime();
         }
 
         initChart();

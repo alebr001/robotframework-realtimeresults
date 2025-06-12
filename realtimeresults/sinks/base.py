@@ -1,4 +1,4 @@
-## realtimelogger/sinks/base.py
+## realtimeresults/sinks/base.py
 from abc import abstractmethod
 import logging
 

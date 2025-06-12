@@ -1,13 +1,14 @@
-## realtimelogger/listener.py
+## realtimeresults/listener.py
 import requests
 from helpers.config_loader import load_config
-from realtimelogger.sinks.http import HttpSink
-from realtimelogger.sinks.loki import LokiSink  # Temp, later this wil be dynamic
-from realtimelogger.sinks.sqlite import SqliteSink
+from realtimeresults.sinks.http import HttpSink
+from realtimeresults.sinks.loki import LokiSink
+from realtimeresults.sinks.sqlite import SqliteSink
 from helpers.logger import setup_logging
+
 import logging
 
-class RealTimeLogger:
+class RealTimeResults:
     ROBOT_LISTENER_API_VERSION = 3
 
     def __init__(self, config_str=None):
@@ -79,7 +80,6 @@ class RealTimeLogger:
             suite=attrs.longname.split('.')[0],
             tags=attrs.tags,
             timestamp=attrs.starttime
-
         )
 
     def end_test(self, name, attrs):
@@ -94,6 +94,27 @@ class RealTimeLogger:
             elapsed = attrs.elapsedtime / 1000 if hasattr(attrs, "elapsedtime") else None,
             timestamp=str(attrs.endtime),
             tags=[str(tag) for tag in attrs.tags]
+        )
+
+    def start_suite(self, name, attrs):
+        self._send_event(
+            "start_suite",
+            name=attrs.name,
+            longname=attrs.longname,
+            timestamp=attrs.starttime,
+            totaltests=attrs.totaltests,
+        )
+
+    def end_suite(self, name, attrs):
+        self._send_event(
+            "end_suite",
+            name=attrs.name,
+            longname=attrs.longname,
+            timestamp=attrs.endtime,
+            elapsed=attrs.elapsedtime / 1000,
+            status=attrs.status,
+            message=attrs.message,
+            statistics=str(attrs.statistics)  # <-- voeg dit toe
         )
 
     def _parse_config(self, config_str):

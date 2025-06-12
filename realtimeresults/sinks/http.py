@@ -1,4 +1,4 @@
-# realtimelogger/sinks/http.py
+# realtimeresults/sinks/http.py
 import requests
 from .base import EventSink
 

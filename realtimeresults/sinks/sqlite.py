@@ -22,6 +22,15 @@ class SqliteSink(EventSink):
     def _handle_event(self, data):
         self.logger.debug("[SQLITE_SYNC] Received event: %s → %s", data.get("event_type"), data.get("name"))
 
+        tags = data.get("tags", [])
+        if not isinstance(tags, list):
+            try:
+                tags = list(tags)
+            except Exception:
+                tags = [str(tags)]
+
+        tag_string = ",".join(str(tag) for tag in tags)
+
         try:
             with sqlite3.connect(self.database_path) as conn:
                 cursor = conn.cursor()
@@ -34,7 +43,7 @@ class SqliteSink(EventSink):
                     data.get("status"),
                     data.get("message"),
                     data.get("elapsed"),
-                    ",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags")
+                    tag_string
                 ))
                 conn.commit()
         except Exception as e:

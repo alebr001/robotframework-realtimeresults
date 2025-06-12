@@ -1,14 +1,16 @@
 import sqlite3
+import logging
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
+from datetime import datetime, timezone
+from fastapi.staticfiles import StaticFiles
 
 from backend.readers.sqlite_reader import SqliteEventReader
-from realtimelogger.sinks.sqlite import SqliteSink
 from backend.sinks.memory_sqlite import MemorySqliteSink
+from realtimeresults.sinks.sqlite import SqliteSink
 from helpers.config_loader import load_config
 from helpers.logger import setup_logging
-from fastapi.staticfiles import StaticFiles
-import logging
 
 logger = logging.getLogger(__name__)
 config = load_config()
@@ -63,9 +65,20 @@ def clear_events():
 
     return RedirectResponse(url="/events", status_code=303)
 
+@app.get("/elapsed")
+def get_elapsed_time():
+    start_event = next((e for e in event_reader.get_events() if e['event_type'] == 'start_suite'), None)
+    if not start_event:
+        return {"elapsed": "00:00:00"}
+
+    start_ts = datetime.fromisoformat(start_event["timestamp"])
+    now = datetime.now(timezone.utc)
+    elapsed = now - start_ts
+    return {"elapsed": str(elapsed).split('.')[0]} 
+
 @app.get("/")
 def index():
-    return {"message": "RealtimeLogger API is running", "endpoints": ["/events", "/event (POST)"]}
+    return {"message": "RealtimeResults API is running", "endpoints": ["/events", "/event (POST)"]}
 
 @app.get("/favicon.ico")
 def favicon():

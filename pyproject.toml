@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "realtimelogger"
+name = "realtimeresults"
 version = "0.1.0"
 description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
 authors = ["Jurgen Alebregtse j.alebregtse@proton.me"]
 license = "MIT"
 packages = [
-    { include = "realtimelogger" },
+    { include = "realtimeresults" },
     { include = "backend" }
 ]
 

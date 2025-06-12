@@ -18,6 +18,16 @@ class MemorySqliteSink:
         return self.conn
     
     def handle_event(self, data):
+        tags = data.get("tags", [])
+        if not isinstance(tags, list):
+            try:
+                tags = list(tags)
+            except Exception:
+                tags = [str(tags)]
+
+        tag_string = ",".join(str(tag) for tag in tags)
+
+
         cursor = self.conn.cursor()
         cursor.execute(INSERT_EVENT, (
             data.get("testid"),
@@ -28,6 +38,6 @@ class MemorySqliteSink:
             data.get("status"),
             data.get("message"),
             data.get("elapsed"),
-            ",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags")
-        ))
+            tag_string
+            ))
         self.conn.commit()
