@@ -5,17 +5,17 @@ from realtimeresults.sinks.http import HttpSink
 from realtimeresults.sinks.loki import LokiSink
 from realtimeresults.sinks.sqlite import SqliteSink
 from helpers.logger import setup_logging
-
 import logging
+
+logger = logging.getLogger(__name__)
+config = load_config()
+setup_logging(config.get("log_level_listener", "warn"))
 
 class RealTimeResults:
     ROBOT_LISTENER_API_VERSION = 3
 
     def __init__(self, config_str=None):
-        logger = logging.getLogger(__name__)
-        config = load_config()
-        setup_logging(config.get("log_level_listener", "warn"))
- 
+
         logger.info("----------------")
         logger.info("Started listener")
         logger.info("----------------")
@@ -47,7 +47,7 @@ class RealTimeResults:
             else:
                 raise ValueError(f"Unsupported sink strategy '{strategy}'")
         except Exception as e:
-            print(f"[WARN] Sink '{self.sink_type}' initialisatie failed ({e}), no sink selected.")
+            logger.warning(f"[WARN] Sink '{self.sink_type}' initialisatie failed ({e}), no sink selected.")
             self.sink = None
 
     def _send_event(self, event_type, **kwargs):
@@ -61,14 +61,14 @@ class RealTimeResults:
             try:
                 requests.post("http://localhost:8000/event", json=event, timeout=0.5)
             except requests.RequestException as e:
-                print(f"[WARN] Backend push faalde: {e}")
+                logger.warning(f"[WARN] Backend push faalde: {e}")
         elif self.sink is not None:
             try:
                 self.sink.handle_event(event) 
             except Exception as e:
-                print(f"[ERROR] Event handling failed: {e}")
+                logger.error(f"[ERROR] Event handling failed: {e}")
         else:
-            print(f"[DEBUG] No sink configured for sink_type='{self.sink_type}' — event ignored.")
+            logger.debug(f"[DEBUG] No sink configured for sink_type='{self.sink_type}' — event ignored.")
 
     def start_test(self, name, attrs):
         test_id = f"{attrs.longname}::{attrs.starttime}"
@@ -102,7 +102,7 @@ class RealTimeResults:
             name=attrs.name,
             longname=attrs.longname,
             timestamp=attrs.starttime,
-            totaltests=attrs.totaltests,
+            totaltests=len(attrs.tests)
         )
 
     def end_suite(self, name, attrs):
@@ -114,11 +114,11 @@ class RealTimeResults:
             elapsed=attrs.elapsedtime / 1000,
             status=attrs.status,
             message=attrs.message,
-            statistics=str(attrs.statistics)  # <-- voeg dit toe
+            statistics=str(attrs.statistics)
         )
 
     def _parse_config(self, config_str):
-        # Simpel string parsing: ":key1=value1;key2=value2"
+        # Simple string parsing: ":key1=value1;key2=value2"
         config = {}
         if config_str:
             for part in config_str.split(";"):
