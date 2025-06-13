@@ -7,5 +7,5 @@
   "log_level": "INFO",
   "log_level_listener": "",
   "log_level_backend": "",
-  "log_level_client": ""
+  "log_level_cli": ""
   }
