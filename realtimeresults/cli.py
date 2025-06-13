@@ -4,13 +4,17 @@ import sys
 import os
 import time
 import socket
+from helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
 from helpers.logger import setup_logging
 import logging
 
 BACKEND_HOST = "127.0.0.1"
 BACKEND_PORT = 8000
-setup_logging("info")
+
+config = load_config()
+setup_logging(config.get("log_level_cli", config.get("log_level", "info")))
+
 logger = logging.getLogger("rt-robot")
 
 def is_port_open(host, port):
@@ -21,7 +25,7 @@ def is_port_open(host, port):
 def start_backend():
     logger.debug("backend not running, starting it now...")
     subprocess.Popen([
-        "poetry", "run", "uvicorn", "backend.main:app",
+        "uvicorn", "backend.main:app",
         "--host", BACKEND_HOST, "--port", str(BACKEND_PORT),
         "--reload"
     ])
@@ -51,8 +55,8 @@ def main():
     logger.info(f"[rt-robot] Backend running on http://{BACKEND_HOST}:{BACKEND_PORT}")
 
     command = [
-        "poetry", "run", "robot",
-        "--listener", "realtimeresults.listener.RealTimeResults",
+        "robot",
+        "--listener", "realtimeresults.listener.RealTimeResults:totaltests={total}",
         "--variable", f"totaltests:{total}"
     ] + args
 
