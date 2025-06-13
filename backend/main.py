@@ -36,7 +36,7 @@ if strategy == "http":
         memory_sink = MemorySqliteSink()
         event_sink = memory_sink  # used for POST /event
         event_reader = SqliteEventReader(conn=memory_sink.get_connection())
-elif strategy == "local":        
+elif strategy == "local":
     if sink_type == "sqlite":
         event_sink = SqliteSink(database_path=db_path)
         event_reader = SqliteEventReader(database_path=db_path)
