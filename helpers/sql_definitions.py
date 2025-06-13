@@ -31,7 +31,6 @@ SELECT_ALL_EVENTS = """
     SELECT timestamp, event_type, name, suite, status, message, elapsed, tags
     FROM events
     ORDER BY timestamp ASC
-    LIMIT 100
 """
 
 DELETE_ALL_EVENTS = "DELETE FROM events"
