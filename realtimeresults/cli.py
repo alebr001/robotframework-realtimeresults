@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import subprocess
 import sys
-import os
 import time
 import socket
 from helpers.config_loader import load_config
@@ -37,7 +36,7 @@ def start_backend():
         if is_port_open(BACKEND_HOST, BACKEND_PORT):
             return
         time.sleep(0.25)
-    logger.warning("[rt-robot] Timeout starting backend.")
+    logger.warning("Timeout starting backend.")
     sys.exit(1)
 
 def count_tests(path):
@@ -45,18 +44,18 @@ def count_tests(path):
         suite = TestSuiteBuilder().build(path)
         return suite.test_count
     except Exception as e:
-        logger.error(f"[rt-robot] Cannot count tests: {e}")
+        logger.error(f"Cannot count tests: {e}")
         return 0
 
 def main():    
     args = sys.argv[1:]
     test_path = args[-1] if args else "tests/"
     total = count_tests(test_path)
-    logger.info(f"[rt-robot] Starting testrun... with total tests: {total}")
+    logger.info(f"Starting testrun... with total tests: {total}")
 
     if not is_port_open(BACKEND_HOST, BACKEND_PORT):
         start_backend()
-    logger.info(f"[rt-robot] Backend running on http://{BACKEND_HOST}:{BACKEND_PORT}")
+    logger.info(f"Backend running on http://{BACKEND_HOST}:{BACKEND_PORT}")
     logger.debug("------DEBUGTEST----------")
 
     command = [
@@ -66,7 +65,7 @@ def main():
 
     subprocess.run(command)
 
-    logger.info(f"\n[rt-robot] Testrun finished. Dashboard: http://{BACKEND_HOST}:{BACKEND_PORT}/dashboard")
+    logger.info(f"Testrun finished. Dashboard: http://{BACKEND_HOST}:{BACKEND_PORT}/dashboard")
 
 if __name__ == "__main__":
     main()
