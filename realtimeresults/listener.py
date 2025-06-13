@@ -4,28 +4,32 @@ from helpers.config_loader import load_config
 from realtimeresults.sinks.http import HttpSink
 from realtimeresults.sinks.loki import LokiSink
 from realtimeresults.sinks.sqlite import SqliteSink
-from helpers.logger import setup_logging
+from helpers.logger import setup_root_logging
 import logging
 
-logger = logging.getLogger(__name__)
 config = load_config()
-setup_logging(config.get("log_level_listener", "warn"))
+setup_root_logging(config.get("log_level", "info"))
 
 class RealTimeResults:
     ROBOT_LISTENER_API_VERSION = 3
 
     def __init__(self, config_str=None):
+        self.logger = logging.getLogger("rt.lstnr")
+        component_level_logging = config.get("log_level_listener")
+        if component_level_logging:
+            self.logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
-        logger.info("----------------")
-        logger.info("Started listener")
-        logger.info("----------------")
+        self.logger.info("----------------")
+        self.logger.info("Started listener")
+        self.logger.info("----------------")
+        self.logger.debug("------DEBUGTEST----------")
 
         file_config = load_config()  # {"sink_type": "sqlite", "debug": false}
         cli_config = self._parse_config(config_str)
         self.config = {**file_config, **cli_config}
 
         self.sink_type = self.config.get("sink_type", "none").lower()
-        # self.debug = self.config.get("debug", "false") == "true"
+        self.total_tests = int(cli_config.get("totaltests", 0))
 
         strategy = self.config.get("sink_strategy", "local")
         try:
@@ -47,7 +51,7 @@ class RealTimeResults:
             else:
                 raise ValueError(f"Unsupported sink strategy '{strategy}'")
         except Exception as e:
-            logger.warning(f"[WARN] Sink '{self.sink_type}' initialisatie failed ({e}), no sink selected.")
+            self.logger.warning(f"[WARN] Sink '{self.sink_type}' initialisatie failed ({e}), no sink selected.")
             self.sink = None
 
     def _send_event(self, event_type, **kwargs):
@@ -61,14 +65,14 @@ class RealTimeResults:
             try:
                 requests.post("http://localhost:8000/event", json=event, timeout=0.5)
             except requests.RequestException as e:
-                logger.warning(f"[WARN] Backend push faalde: {e}")
+                self.logger.warning(f"[WARN] Backend push faalde: {e}")
         elif self.sink is not None:
             try:
                 self.sink.handle_event(event) 
             except Exception as e:
-                logger.error(f"[ERROR] Event handling failed: {e}")
+                self.logger.error(f"[ERROR] Event handling failed: {e}")
         else:
-            logger.debug(f"[DEBUG] No sink configured for sink_type='{self.sink_type}' — event ignored.")
+            self.logger.debug(f"[DEBUG] No sink configured for sink_type='{self.sink_type}' — event ignored.")
 
     def start_test(self, name, attrs):
         test_id = f"{attrs.longname}::{attrs.starttime}"
@@ -102,7 +106,7 @@ class RealTimeResults:
             name=attrs.name,
             longname=attrs.longname,
             timestamp=attrs.starttime,
-            totaltests=len(attrs.tests)
+            totaltests=self.total_tests
         )
 
     def end_suite(self, name, attrs):

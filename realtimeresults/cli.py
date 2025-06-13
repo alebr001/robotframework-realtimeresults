@@ -6,16 +6,19 @@ import time
 import socket
 from helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
-from helpers.logger import setup_logging
+from helpers.logger import setup_root_logging
 import logging
 
 BACKEND_HOST = "127.0.0.1"
 BACKEND_PORT = 8000
 
 config = load_config()
-setup_logging(config.get("log_level_cli", config.get("log_level", "info")))
+setup_root_logging(config.get("log_level", "info"))
 
-logger = logging.getLogger("rt-robot")
+logger = logging.getLogger("rt-cli")
+component_level_logging = config.get("log_level_cli")
+if component_level_logging:
+    logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
 def is_port_open(host, port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -34,7 +37,7 @@ def start_backend():
         if is_port_open(BACKEND_HOST, BACKEND_PORT):
             return
         time.sleep(0.25)
-    print("[rt-robot] Timeout starting backend.")
+    logger.warning("[rt-robot] Timeout starting backend.")
     sys.exit(1)
 
 def count_tests(path):
@@ -42,25 +45,25 @@ def count_tests(path):
         suite = TestSuiteBuilder().build(path)
         return suite.test_count
     except Exception as e:
-        print(f"[rt-robot] Cannot count tests: {e}")
+        logger.error(f"[rt-robot] Cannot count tests: {e}")
         return 0
 
 def main():    
     args = sys.argv[1:]
     test_path = args[-1] if args else "tests/"
     total = count_tests(test_path)
+    logger.info(f"[rt-robot] Starting testrun... with total tests: {total}")
 
     if not is_port_open(BACKEND_HOST, BACKEND_PORT):
         start_backend()
     logger.info(f"[rt-robot] Backend running on http://{BACKEND_HOST}:{BACKEND_PORT}")
+    logger.debug("------DEBUGTEST----------")
 
     command = [
         "robot",
-        "--listener", "realtimeresults.listener.RealTimeResults:totaltests={total}",
-        "--variable", f"totaltests:{total}"
+        "--listener", f"realtimeresults.listener.RealTimeResults:totaltests={total}"
     ] + args
 
-    logger.info(f"[rt-robot] Starting testrun... with total tests: {total}")
     subprocess.run(command)
 
     logger.info(f"\n[rt-robot] Testrun finished. Dashboard: http://{BACKEND_HOST}:{BACKEND_PORT}/dashboard")

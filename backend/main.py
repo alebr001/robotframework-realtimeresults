@@ -10,11 +10,15 @@ from backend.readers.sqlite_reader import SqliteEventReader
 from backend.sinks.memory_sqlite import MemorySqliteSink
 from realtimeresults.sinks.sqlite import SqliteSink
 from helpers.config_loader import load_config
-from helpers.logger import setup_logging
+from helpers.logger import setup_root_logging
 
-logger = logging.getLogger(__name__)
 config = load_config()
-setup_logging(config.get("log_level", "info"))
+setup_root_logging(config.get("log_level", "info"))
+
+logger = logging.getLogger("rt.backend")
+component_level_logging = config.get("log_level_cli")
+if component_level_logging:
+    logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
 logger.debug("----------------------------")
 logger.debug("Starting FastAPI application")
