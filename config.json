@@ -2,6 +2,8 @@
   "sink_strategy": "local",
   "loki_endpoint": "http://localhost:3100",
   "local_endpoint": "http://localhost:8000/event",
+  "backend_host": "127.0.0.1",
+  "backend_port": 8000,
   "sink_type": "sqlite",
   "sqlite_path": "eventlog.db",
   "log_level": "INFO",
