@@ -10,9 +10,13 @@ from robot.running.builder import TestSuiteBuilder
 from helpers.logger import setup_root_logging
 
 config = load_config()
+BACKEND_HOST = config.get("backend_host", "127.0.0.1")
+BACKEND_PORT = int(config.get("backend_port", 8000)
+                   )
 setup_root_logging(config.get("log_level", "info"))
 logger = logging.getLogger("rt-cli")
 component_level_logging = config.get("log_level_cli")
+
 if component_level_logging:
     logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
@@ -23,10 +27,7 @@ def is_port_open(host, port):
 
 def start_backend(silent=True):
     logger.debug("backend not running, starting it now...")
-
-    BACKEND_HOST = config.get("backend_host", "127.0.0.1")
-    BACKEND_PORT = int(config.get("backend_port", 8000))
-    
+   
     command = [
         "poetry", "run", "uvicorn",
         "backend.main:app",
