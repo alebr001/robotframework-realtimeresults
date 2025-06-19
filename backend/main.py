@@ -14,6 +14,9 @@ from backend.sinks.memory_sqlite import MemorySqliteSink
 from helpers.config_loader import load_config
 from helpers.logger import setup_root_logging
 
+from contextlib import asynccontextmanager
+import asyncio
+
 config = load_config()
 setup_root_logging(config.get("log_level", "info"))
 
@@ -101,3 +104,21 @@ async def sqlite_error_handler(request: Request, exc: sqlite3.OperationalError):
         status_code=503,
         content={"detail": f"Database error: {str(exc)}"}
     )
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    async def log_callback(data):
+        print("NEW LOG:", data)
+
+    log_path = config.get("source_log_path", "/pad/naar/app.log")
+    task = asyncio.create_task(tail_log_file(log_path, log_callback))
+
+    yield
+
+    # Shutdown
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
