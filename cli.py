@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import subprocess
 import sys
-import shlex
+import logging
+import platform
 import time
 import socket
 from helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
 from helpers.logger import setup_root_logging
-import logging
 
 config = load_config()
 
@@ -32,13 +32,29 @@ def start_backend(silent=True):
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
-    command = f"poetry run uvicorn backend.main:app --host {BACKEND_HOST} --port {BACKEND_PORT} --reload"
-    process = subprocess.Popen(
-        shlex.split(command),
-        stdout=stdout_dest,
-        stderr=stderr_dest,
-        start_new_session=True  # voorkomt dat ctrl+C je hele run stopt
-    )
+    command = [
+        "poetry", "run", "uvicorn",
+        "backend.main:app",
+        "--host", BACKEND_HOST,
+        "--port", str(BACKEND_PORT),
+        "--reload"
+    ]
+
+    if platform.system() == "Windows":
+        CREATE_NEW_PROCESS_GROUP = 0x00000200
+        process = subprocess.Popen(
+            command,
+            creationflags=CREATE_NEW_PROCESS_GROUP, # prevents ctrl+C to stop the run
+            stdout=stdout_dest,
+            stderr=stderr_dest
+        )
+    else:
+        process = subprocess.Popen(
+            command,
+            start_new_session=True, # prevents ctrl+C to stop the run
+            stdout=stdout_dest,
+            stderr=stderr_dest
+        )
 
     with open("backend.pid", "w") as f:
         f.write(str(process.pid))
