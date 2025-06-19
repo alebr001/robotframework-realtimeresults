@@ -1,11 +1,11 @@
 # backend/event_reader.py
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List, Dict
 import logging
 
 
-class EventReader:
+class EventReader(ABC):
     def __init__(self, database_path=None):
         self.logger = logging.getLogger(self.__class__.__module__)
 
@@ -19,8 +19,10 @@ class EventReader:
         
     @abstractmethod
     def _get_events(self) -> List[Dict]:
+        """Internal method implemented by subclass"""
         pass
 
     @abstractmethod
     def _clear_events(self) -> None:
+        """Internal method implemented by subclass"""
         pass
