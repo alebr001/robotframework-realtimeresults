@@ -22,11 +22,9 @@ def kill_backend():
 
     try:
         if system == "Windows":
-            # Windows gebruikt geen signalen zoals Unix; TerminateProcess equivalent
             print(f"Attempting to terminate process {pid} on Windows...")
             os.system(f"taskkill /PID {pid} /F")
         else:
-            # macOS en Linux: gebruik SIGTERM
             print(f"Sending SIGTERM to process {pid} on {system}...")
             os.kill(pid, signal.SIGTERM)
 
