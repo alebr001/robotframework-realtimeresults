@@ -28,30 +28,24 @@ class RealTimeResults:
         cli_config = self._parse_config(config_str)
         self.config = {**file_config, **cli_config}
 
-        self.sink_type = self.config.get("sink_type", "none").lower()
+        self.listener_sink_type = self.config.get("listener_sink_type", "none").lower()
         self.total_tests = int(cli_config.get("totaltests", 0))
 
-        strategy = self.config.get("sink_strategy", "local")
         try:
-            if strategy == "http":
-                if self.sink_type == "loki":
-                    self.endpoint = self.config.get("endpoint", "http://localhost:3100")
-                    self.sink = LokiSink(endpoint=self.endpoint)
-                elif self.sink_type == "sqlite":
-                    self.sink = HttpSink(endpoint=self.config.get("endpoint", "http://localhost:8000/event"))
-                else:
-                    raise ValueError(f"Unsupported sink_type: {self.sink_type}")
-            elif strategy == "local":
-                if self.sink_type == "sqlite":
-                    self.sink = SqliteSink(database_path=self.config.get("database_path", "eventlog.db"))
-                elif self.sink_type == "none":
-                    self.sink = None
-                else:
-                    raise ValueError(f"Unsupported sink_type: {self.sink_type}")
+            if self.listener_sink_type == "backend_http_inmemory":
+                self.sink = HttpSink(endpoint=self.config.get("backend_endpoint", "http://localhost:8000/event"))
+            elif self.listener_sink_type == "loki":
+                self.endpoint = self.config.get("endpoint", "http://localhost:3100")
+                self.sink = LokiSink(endpoint=self.endpoint)
+            elif self.listener_sink_type == "sqlite":
+                self.sink = SqliteSink(database_path=self.config.get("database_path", "eventlog.db"))
+            elif self.listener_sink_type == "none":
+                self.sink = None
             else:
-                raise ValueError(f"Unsupported sink strategy '{strategy}'")
+                raise ValueError(f"Unsupported sink_type: {self.listener_sink_type}")
+
         except Exception as e:
-            self.logger.warning(f"[WARN] Sink '{self.sink_type}' initialisatie failed ({e}), no sink selected.")
+            self.logger.warning(f"[WARN] Sink '{self.listener_sink_type}' initialisatie failed ({e}), no sink selected.")
             self.sink = None
 
     def _send_event(self, event_type, **kwargs):
@@ -61,7 +55,7 @@ class RealTimeResults:
             }
          
         # Push naar backend API
-        if self.sink_type == "memory":
+        if self.listener_sink_type == "memory":
             try:
                 requests.post("http://localhost:8000/event", json=event, timeout=0.5)
             except requests.RequestException as e:
@@ -72,7 +66,7 @@ class RealTimeResults:
             except Exception as e:
                 self.logger.error(f"[ERROR] Event handling failed: {e}")
         else:
-            self.logger.debug(f"[DEBUG] No sink configured for sink_type='{self.sink_type}' — event ignored.")
+            self.logger.debug(f"[DEBUG] No sink configured for sink_type='{self.listener_sink_type}' — event ignored.")
 
     def start_test(self, name, attrs):
         test_id = f"{attrs.longname}::{attrs.starttime}"

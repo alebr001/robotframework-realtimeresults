@@ -6,7 +6,8 @@ authors = ["Jurgen Alebregtse j.alebregtse@proton.me"]
 license = "MIT"
 packages = [
     { include = "realtimeresults" },
-    { include = "backend" }
+    { include = "backend" },
+    { include = "dashboard" }
 ]
 
 [tool.poetry.dependencies]
@@ -24,4 +25,4 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-rt-robot = "realtimeresults.cli:main"
+rt-robot = "cli:main"

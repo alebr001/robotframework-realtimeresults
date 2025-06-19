@@ -1,14 +1,16 @@
 import sqlite3
 import logging
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles
 
-from backend.readers.sqlite_reader import SqliteEventReader
+from backend.ingest.source.log_tail import tail_log_file
+from backend.ingest.readers.sqlite_event_reader import SqliteEventReader
+
 from backend.sinks.memory_sqlite import MemorySqliteSink
-from realtimeresults.sinks.sqlite import SqliteSink
+
 from helpers.config_loader import load_config
 from helpers.logger import setup_root_logging
 
@@ -25,26 +27,30 @@ logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
 
 app = FastAPI()
-app.mount("/dashboard", StaticFiles(directory="backend/static", html=True), name="static")
+app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
-sink_type = config.get("sink_type", "sqlite").lower()
+listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
-strategy = config.get("sink_strategy", "local")
+strategy = config.get("backend_strategy", "db").lower()  # http_backend_listener, db, loki
 
-if strategy == "http":
-    if sink_type == "sqlite":
+event_sink = None # default
+if strategy == "sqlite":
+    if listener_sink_type == "backend_http_inmemory":
         memory_sink = MemorySqliteSink()
         event_sink = memory_sink  # used for POST /event
-        event_reader = SqliteEventReader(conn=memory_sink.get_connection())
-elif strategy == "local":
-    if sink_type == "sqlite":
-        event_sink = SqliteSink(database_path=db_path)
-        event_reader = SqliteEventReader(database_path=db_path)
+        event_reader = SqliteEventReader(conn=memory_sink.get_connection()) # used for GET /events from db
+    if listener_sink_type == "sqlite":
+        event_reader = SqliteEventReader(database_path=db_path) # used for GET /events from db
+    else:
+        raise ValueError(f"Unsupported listener_sink_type in config: {listener_sink_type}")
 else:
-    raise ValueError(f"Unsupported sink_type in config: {sink_type}")
+    raise ValueError(f"Unsupported strategy in config: {strategy}")
 
 @app.post("/event")
 async def receive_event(request: Request):
+    if event_sink is None or not isinstance(event_sink, MemorySqliteSink):
+            raise HTTPException(status_code=405, detail="Writing events is not allowed in persistent mode.")
+
     event = await request.json()
     try:
         event_sink.handle_event(event)
