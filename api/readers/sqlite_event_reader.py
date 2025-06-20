@@ -1,8 +1,8 @@
 # backend/sqlite_reader.py
 import sqlite3
 from .event_reader import EventReader
-from helpers.config_loader import load_config
-from helpers.sql_definitions import SELECT_ALL_EVENTS, DELETE_ALL_EVENTS
+from shared.helpers.config_loader import load_config
+from shared.helpers.sql_definitions import SELECT_ALL_EVENTS, DELETE_ALL_EVENTS
 from typing import List, Dict
 
 

@@ -8,9 +8,10 @@ class HttpSink(EventSink):
         self.endpoint = endpoint
         self.timeout = timeout
 
+
     def _handle_event(self, data):
         payload = dict(data)  # shallow copy
         try:
             requests.post(self.endpoint, json=payload, timeout=self.timeout)
         except requests.RequestException as e:
-            print(f"[WARN] Failed to post event to {self.endpoint}: {e}")
+            self.logger.warning(f"Failed to post event to {self.endpoint}: {e}")

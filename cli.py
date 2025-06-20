@@ -5,9 +5,9 @@ import logging
 import platform
 import time
 import socket
-from helpers.config_loader import load_config
+from shared.helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
-from helpers.logger import setup_root_logging
+from shared.helpers.logger import setup_root_logging
 
 config = load_config()
 BACKEND_HOST = config.get("backend_host", "127.0.0.1")
@@ -89,7 +89,7 @@ def main():
 
     command = [
         "robot",
-        "--listener", f"realtimeresults.listener.RealTimeResults:totaltests={total}"
+        "--listener", f"producers.listener.listener.RealTimeResults:totaltests={total}"
     ] + args
 
     try:
