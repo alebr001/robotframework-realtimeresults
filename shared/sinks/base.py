@@ -2,6 +2,8 @@
 from abc import ABC, abstractmethod
 import logging
 
+from shared.helpers.config_loader import load_config
+
 class EventSink(ABC):
     """Base class for synchronous sinks."""
 
@@ -23,14 +25,15 @@ class AsyncEventSink(ABC):
     """Base class for asynchronous sinks."""
 
     def __init__(self):
+        config = load_config()
         self.logger = logging.getLogger(self.__class__.__module__)
 
-    async def handle_event(self, data):
+    async def async_handle_event(self, data):
         """Public entry point for async sinks."""
         self.logger.debug("[%s] Handling async event: %s", self.__class__.__name__, data.get("event_type"))
-        await self._handle_event(data)
+        await self._async_handle_event(data)
 
     @abstractmethod
-    async def _handle_event(self, data):
+    async def _async_handle_event(self, data):
         """Must be implemented by async sinks."""
         pass        

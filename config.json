@@ -1,6 +1,7 @@
 {
   "backend_strategy": "sqlite",
   "listener_sink_type": "sqlite",
+  "ingest_sink_type": "asyncsqlite",
 
   "backend_endpoint": "http://localhost:8000/event",
   "sqlite_path": "eventlog.db",

@@ -3,20 +3,22 @@ import logging
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
+from shared.sinks.memory_sqlite import MemorySqliteSink
+from shared.helpers.ensure_db_schema import ensure_schema
 
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 
-from api.readers.sqlite_event_reader import SqliteEventReader
+from api.viewer.readers.sqlite_reader import SqliteReader
 
-from shared.sinks.memory_sqlite import MemorySqliteSink
 
 config = load_config()
+ensure_schema(config.get("sqlite_path", "eventlog.db"))
 setup_root_logging(config.get("log_level", "info"))
 
-logger = logging.getLogger("rt.backend")
+logger = logging.getLogger("rt.api.viewer")
 component_level_logging = config.get("log_level_cli")
 if component_level_logging:
     logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
@@ -37,9 +39,9 @@ if strategy == "sqlite":
     if listener_sink_type == "backend_http_inmemory":
         memory_sink = MemorySqliteSink()
         event_sink = memory_sink  # used for POST /event
-        event_reader = SqliteEventReader(conn=memory_sink.get_connection()) # used for GET /events from db
+        event_reader = SqliteReader(conn=memory_sink.get_connection()) # used for GET /events from db
     if listener_sink_type == "sqlite":
-        event_reader = SqliteEventReader(database_path=db_path) # used for GET /events from db
+        event_reader = SqliteReader(database_path=db_path) # used for GET /events from db
     else:
         raise ValueError(f"Unsupported listener_sink_type in config: {listener_sink_type}")
 else:
@@ -60,6 +62,11 @@ async def receive_event(request: Request):
 @app.get("/events")
 def get_events():
     return event_reader.get_events()
+
+
+@app.get("/applog")
+def get_applog():
+    return event_reader.get_app_logs()
     
 @app.get("/events/clear")
 def clear_events():

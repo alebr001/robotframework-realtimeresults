@@ -30,7 +30,7 @@ def start_backend(silent=True):
    
     command = [
         "poetry", "run", "uvicorn",
-        "backend.main:app",
+        "api.viewer.main:app",
         "--host", BACKEND_HOST,
         "--port", str(BACKEND_PORT),
         "--reload"

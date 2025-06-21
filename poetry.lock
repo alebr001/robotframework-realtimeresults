@@ -551,11 +551,30 @@ version = "7.3"
 description = "Generic automation framework for acceptance testing and robotic process automation (RPA)"
 optional = false
 python-versions = ">=3.8"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "robotframework-7.3-py3-none-any.whl", hash = "sha256:68631cc3115760c00f2e4b2822636cbb4c242e1fd8671ce3e88021b3202556fe"},
     {file = "robotframework-7.3.tar.gz", hash = "sha256:676f75a58e34db04cde91922c0bc68d4d73f091b6be753809ce16e9579412323"},
 ]
+
+[[package]]
+name = "robotframework-requests"
+version = "0.9.7"
+description = "Robot Framework keyword library wrapper around requests"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "robotframework-requests-0.9.7.tar.gz", hash = "sha256:c2a2839813e1dc6b299e7d336314c9982c225c5b7e001ec893dc3555c6a95740"},
+    {file = "robotframework_requests-0.9.7-py3-none-any.whl", hash = "sha256:96315066318778cbcf5523cdb6175f5a0b8fec33275030a20dade3a3d98aeca2"},
+]
+
+[package.dependencies]
+requests = "*"
+robotframework = "*"
+
+[package.extras]
+test = ["coverage", "flake8", "flask", "pytest", "robotframework (>=3.2.1)", "six"]
 
 [[package]]
 name = "sniffio"
@@ -700,4 +719,4 @@ standard = ["colorama (>=0.4) ; sys_platform == \"win32\"", "httptools (>=0.6.3)
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "9576e201d4787439df4e840e076efc8bc46ddf9483c2395f9986da6973244883"
+content-hash = "709635a1618a791f564e66a238559d0f21a67f5658e5ce8f0150e067c734b891"

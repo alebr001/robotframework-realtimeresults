@@ -7,13 +7,15 @@ from config import LOG_FILE_PATH, INGEST_ENDPOINT, POLL_INTERVAL, SOURCE_LABEL
 async def post_log(message: str):
     payload = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event_type": "app_log",
         "message": message,
         "source": SOURCE_LABEL,
         "level": "INFO"  # of None
     }
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
-            await client.post(INGEST_ENDPOINT, json=payload)
+            print(f"[log_tail] Payload: {payload}")
+            await client.post(INGEST_ENDPOINT, json=payload, timeout=0.5)
     except Exception as e:
         print(f"[log_tail] Failed to send log: {e}")
 
@@ -24,7 +26,7 @@ async def tail_log_file():
     while True:
         await asyncio.sleep(POLL_INTERVAL)
         if not file.exists():
-            continue
+            Exception(f"[log_tail] Log file {LOG_FILE_PATH} does not exist.")
 
         size = file.stat().st_size
         if size > last_size:
@@ -35,6 +37,7 @@ async def tail_log_file():
 
                 for line in new_lines:
                     if line.strip():
+                        print(line.strip())  # Schrijf naar stdout
                         await post_log(line.strip())
 
 if __name__ == "__main__":

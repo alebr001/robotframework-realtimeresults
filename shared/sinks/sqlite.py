@@ -1,5 +1,7 @@
 import sqlite3
 from pathlib import Path
+
+from shared.helpers.ensure_db_schema import ensure_schema
 from .base import EventSink
 from shared.helpers.sql_definitions import (
     CREATE_EVENTS_TABLE, INSERT_EVENT,
@@ -23,15 +25,13 @@ class SqliteSink(EventSink):
             "end_suite": self._insert_event,
             "log_message": self._insert_rf_log
         }
+        print("[SqliteSink] Initializing DB at", self.database_path)
         self._initialize_database()
 
     def _initialize_database(self):
+        print("[SqliteSink] Creating tables in", self.database_path)
         try:
-            with sqlite3.connect(self.database_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(CREATE_EVENTS_TABLE)
-                cursor.execute(CREATE_RF_LOG_MESSAGE_TABLE)
-                conn.commit()
+            ensure_schema(self.database_path)
         except Exception as e:
             self.logger.warning("[SQLITE_SYNC] DB init failed: %s", e)
             raise

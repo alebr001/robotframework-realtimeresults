@@ -1,5 +1,7 @@
 import aiosqlite
 from pathlib import Path
+
+from shared.helpers.ensure_db_schema import async_ensure_schema
 from .base import AsyncEventSink
 from shared.helpers.sql_definitions import (
     CREATE_APP_LOG_TABLE,
@@ -20,18 +22,16 @@ class AsyncSqliteSink(AsyncEventSink):
             "app_log": self._handle_app_log,
             "metric": self._handle_metric,
         }
+        self.logger.debug("Async sink writing to: %s", self.database_path.resolve())
 
     async def _initialize_database(self):
         try:
-            async with aiosqlite.connect(self.database_path) as db:
-                await db.execute(CREATE_APP_LOG_TABLE)
-                await db.execute(CREATE_METRIC_TABLE)
-                await db.commit()
+            await async_ensure_schema(self.database_path)
         except Exception as e:
             self.logger.warning("[SQLITE_ASYNC] Failed to initialize DB: %s", e)
             raise
 
-    async def _handle_event(self, data):
+    async def _async_handle_event(self, data):
         event_type = data.get("event_type")
         handler = self.dispatch_map.get(event_type)
         if handler:
@@ -40,12 +40,15 @@ class AsyncSqliteSink(AsyncEventSink):
             self.logger.warning("[SQLITE_ASYNC] No handler for event_type: %s", event_type)
 
     async def _handle_app_log(self, data):
+        self.logger.debug("[SQLITE_ASYNC] Inserting app_log: %s", data)
         try:
             async with aiosqlite.connect(self.database_path) as db:
                 await db.execute(INSERT_APP_LOG, (
                     data.get("timestamp"),
-                    data.get("message"),
+                    data.get("event_type"),
                     data.get("source"),
+                    data.get("message"),
+                    data.get("level")
                 ))
                 await db.commit()
         except Exception as e:
@@ -59,7 +62,7 @@ class AsyncSqliteSink(AsyncEventSink):
                     data.get("name"),
                     data.get("value"),
                     data.get("unit"),
-                    data.get("source"),
+                    data.get("source")
                 ))
                 await db.commit()
         except Exception as e:

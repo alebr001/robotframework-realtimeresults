@@ -1,79 +1,47 @@
 *** Settings ***
 Library    OperatingSystem
+Library    RequestsLibrary
+
 
 *** Test Cases ***
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
+Example API Call - Root
     Sleep    1s
-    Fail    This test is meant to fail.
+    Create Session    mysession    http://127.0.0.1:5000
+    ${response}=    GET On Session    mysession    /
+    Should Be Equal As Integers    ${response.status_code}    200
+    Log    Response: ${response.content}
 
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
+Example API Call - Not Found
     Sleep    1s
-    Fail    This test is meant to fail.
+    Create Session    mysession    http://127.0.0.1:5000
+    ${response}=    GET On Session    mysession    /doesnotexist
+    Should Be Equal As Integers    ${response.status_code}    404
+    Log    Response: ${response.content}
 
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
+Example 2 API Call - Root
     Sleep    1s
-    Fail    This test is meant to fail.
+    Create Session    mysession    http://127.0.0.1:5000
+    ${response}=    GET On Session    mysession    /
+    Should Be Equal As Integers    ${response.status_code}    200
+    Log    Response: ${response.content}
 
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
+Example 2 API Call - Not Found
     Sleep    1s
-    Fail    This test is meant to fail.
-
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
+    Create Session    mysession    http://127.0.0.1:5000
+    ${response}=    GET On Session    mysession    /doesnotexist
+    Should Be Equal As Integers    ${response.status_code}    404
+    Log    Response: ${response.content}
+    
+Example 3 API Call - Root
     Sleep    1s
-    Fail    This test is meant to fail.
+    Create Session    mysession    http://127.0.0.1:5000
+    ${response}=    GET On Session    mysession    /
+    Should Be Equal As Integers    ${response.status_code}    200
+    Log    Response: ${response.content}
 
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
+Example 3 API Call - Not Found
     Sleep    1s
-    Fail    This test is meant to fail.
-
-
-Example Test Fails
-    Sleep    1s
-    Fail    This test is meant to fail.
-
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
-    Sleep    1s
-    Fail    This test is meant to fail.
-
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
-    Sleep    1s
-    Fail    This test is meant to fail.
-
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
-    Sleep    1s
-    Fail    This test is meant to fail.
-
-Example Test Passes
-    Log    This is a passing test.
-
-Example Test Fails
-    Sleep    1s
-    Fail    This test is meant to fail.
-
+    Create Session    mysession    http://127.0.0.1:5000
+    ${response}=    GET On Session    mysession    /doesnotexist
+    Should Be Equal As Integers    ${response.status_code}    404
+    Log    Response: ${response.content}

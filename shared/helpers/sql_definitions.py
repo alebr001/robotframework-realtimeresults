@@ -27,6 +27,16 @@ INSERT_EVENT = """
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
+SELECT_ALL_EVENTS = """
+    SELECT timestamp, event_type, name, suite, status, message, elapsed, tags
+    FROM events
+    ORDER BY timestamp ASC
+"""
+
+DELETE_ALL_EVENTS = "DELETE FROM events"
+
+#############
+
 CREATE_RF_LOG_MESSAGE_TABLE = """
 CREATE TABLE IF NOT EXISTS rf_log_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,10 +53,13 @@ INSERT INTO rf_log_messages (testid, timestamp, level, message, html)
 VALUES (?, ?, ?, ?, ?);
 """
 
+##############
+
 CREATE_APP_LOG_TABLE = """
 CREATE TABLE IF NOT EXISTS app_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT,
+    event_type TEXT,
     source TEXT,
     message TEXT,
     level TEXT
@@ -54,9 +67,18 @@ CREATE TABLE IF NOT EXISTS app_logs (
 """
 
 INSERT_APP_LOG = """
-INSERT INTO app_logs (timestamp, source, message, level)
-VALUES (?, ?, ?, ?)
+INSERT INTO app_logs (timestamp, event_type, source, message, level)
+VALUES (?, ?, ?, ?, ?)
 """
+
+SELECT_ALL_APP_LOGS = """
+    SELECT timestamp, event_type, source, message, level
+    FROM app_logs
+    ORDER BY timestamp ASC
+"""
+
+##############
+
 
 CREATE_METRIC_TABLE = """
 CREATE TABLE IF NOT EXISTS metrics (
@@ -72,11 +94,3 @@ INSERT_METRIC = """
 INSERT INTO metrics (timestamp, name, value, unit)
 VALUES (?, ?, ?, ?)
 """
-
-SELECT_ALL_EVENTS = """
-    SELECT timestamp, event_type, name, suite, status, message, elapsed, tags
-    FROM events
-    ORDER BY timestamp ASC
-"""
-
-DELETE_ALL_EVENTS = "DELETE FROM events"
