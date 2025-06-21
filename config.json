@@ -1,12 +1,15 @@
 {
   "backend_strategy": "sqlite",
   "listener_sink_type": "sqlite",
+  "ingest_sink_type": "asyncsqlite",
 
   "backend_endpoint": "http://localhost:8000/event",
   "sqlite_path": "eventlog.db",
 
   "backend_host": "127.0.0.1",
   "backend_port": 8000,
+
+  "loki_endpoint": "http://localhost:3100",
 
   "source_log_type": "file", 
   "source_log_path": "source.log",
