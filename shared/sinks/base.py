@@ -8,7 +8,7 @@ class EventSink(ABC):
     """Base class for synchronous sinks."""
 
     def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__module__)
+        self.logger = logging.getLogger("rt.sink")
 
     def handle_event(self, data):
         """Public entry point for synchronous sinks."""
@@ -26,7 +26,7 @@ class AsyncEventSink(ABC):
 
     def __init__(self):
         config = load_config()
-        self.logger = logging.getLogger(self.__class__.__module__)
+        self.logger = logging.getLogger("rt.sink")
 
     async def async_handle_event(self, data):
         """Public entry point for async sinks."""

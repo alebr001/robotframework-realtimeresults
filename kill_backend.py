@@ -41,9 +41,9 @@ def kill_backend():
 
     if killed:
         os.remove(PID_FILE)
-        print("All listed processes terminated and PID file removed.")
+        print("All listed processes are terminated and PID file removed.")
     else:
-        print("No processes were terminated.")
+        print("No processes were terminated")
 
 if __name__ == "__main__":
     kill_backend()

@@ -14,8 +14,26 @@
   "loki_endpoint": "http://localhost:3100",
 
   "source_log_type": "file", 
-  "source_log_path": "source.log",
-  
+  "source_log_path": "../flask-logging-demo/single_file_app_pattern/app.log",
+  "source_log_label": "flask-app",
+  "log_tail_poll_interval": 1.0,
+
+  "source_log_tails": [
+    {
+      "log_path": "../flask-logging-demo/single_file_app_pattern/app.log",
+      "label": "flask-app",
+      "poll_interval": 1.0,
+      "event_type": "app_log",
+      "log_level": "INFO"
+    },
+    {
+      "path": "../flask-logging-demo/single_file_app_pattern/www.log",
+      "label": "flask-www",
+      "poll_interval": 1.0,
+      "event_type": "www_log",
+      "log_level": "INFO"
+    }
+  ],
   "log_level": "INFO",
   "log_level_listener": "",
   "log_level_backend": "",
