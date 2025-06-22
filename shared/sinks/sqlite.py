@@ -25,11 +25,10 @@ class SqliteSink(EventSink):
             "end_suite": self._insert_event,
             "log_message": self._insert_rf_log
         }
-        print("[SqliteSink] Initializing DB at", self.database_path)
         self._initialize_database()
 
     def _initialize_database(self):
-        print("[SqliteSink] Creating tables in", self.database_path)
+        self.logger.info("Ensuring tables in %s exist", self.database_path)
         try:
             ensure_schema(self.database_path)
         except Exception as e:
