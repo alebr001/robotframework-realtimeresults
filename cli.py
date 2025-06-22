@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import subprocess
+import psutil
 import sys
 import logging
 import platform
 import time
 import socket
+from pathlib import Path
 from shared.helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
 from shared.helpers.logger import setup_root_logging
@@ -28,7 +30,33 @@ def is_port_open(host, port):
         sock.settimeout(1)
         return sock.connect_ex((host, port)) == 0
 
+def is_process_running(script_name):
+    for proc in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+        try:
+            if script_name in proc.info['cmdline']:
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+    return False
+
 def start_process(command, silent=True):
+    script_path = Path(command[-1]) if command else None
+    # Check if the script exists
+    if script_path and not script_path.exists():
+        rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
+        logger.error(f"Script {script_path.name} not found: {rel_path}")
+        logger.error(f"Please check if the path is correct in your CLI config or code.")
+        sys.exit(1)
+    # Check if the script is already running
+    if script_path and script_path.suffix == ".py":
+        for proc in psutil.process_iter(attrs=["pid", "cmdline"]):
+            try:
+                cmdline = proc.info.get("cmdline") or []
+                if any(script_path.name in part for part in cmdline):
+                    logger.info(f"{script_path.name} is already running with PID {proc.info['pid']}, skipping start.")
+                    return None
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
@@ -59,26 +87,34 @@ def start_services(silent=True):
         "poetry", "run", "uvicorn", "api.ingest.main:app",
         "--host", INGEST_BACKEND_HOST, "--port", str(INGEST_BACKEND_PORT), "--reload"
     ]
-    log_tail_cmd = [
-        "poetry", "run", "python", "ingest/source/log_tail.py"
+    # Command to start the log tailing process
+    # More then one logfile can be tailed, configure in the config.json
+    logs_tail_cmd = [
+        "poetry", "run", "python", "producers/log_producer/log_tails.py"
     ]
 
     pids = {}
 
     if not is_port_open(VIEWER_BACKEND_HOST, VIEWER_BACKEND_PORT):
         proc = start_process(viewer_cmd)
-        pids["viewer"] = proc.pid
-        logger.info("Started viewer backend")
+        if proc is not None:
+            pids["viewer"] = proc.pid
+            logger.info("Started viewer backend")
+        else:
+            logger.error("Failed to start viewer backend.")
 
     if not is_port_open(INGEST_BACKEND_HOST, INGEST_BACKEND_PORT):
         proc = start_process(ingest_cmd)
-        pids["ingest"] = proc.pid
-        logger.info("Started ingest backend")
+        if proc is not None:
+            pids["ingest"] = proc.pid
+            logger.info("Started ingest backend")
+        else:
+            logger.error("Failed to start ingest backend.")
 
-    proc = start_process(log_tail_cmd)
-    pids["log_tail"] = proc.pid
-    logger.info("Started log tail")
-
+    proc = start_process(logs_tail_cmd)
+    if proc is not None:
+        pids["logs_tail"] = proc.pid
+        logger.info("Started logs tail")
 
     with open("backend.pid", "w") as f:
         for name, pid in pids.items():
@@ -109,8 +145,8 @@ def main():
 
     pids = start_services()
 
-    logger.info(f"Viewer: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}")
-    logger.info(f"Ingest: http://{INGEST_BACKEND_HOST}:{INGEST_BACKEND_PORT}")
+    logger.debug(f"Viewer: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}")
+    logger.debug(f"Ingest: http://{INGEST_BACKEND_HOST}:{INGEST_BACKEND_PORT}")
 
     command = [
         "robot",
@@ -127,8 +163,7 @@ def main():
     if pids:
         for name, pid in pids.items():
             logger.info(f"Service {name} started with PID {pid}")
-            logger.info(f"PID to kill current back-end: {pid}")
-        logger.info(f"poetry run uvicorn backend.main:app --reload --host {VIEWER_BACKEND_HOST} --port {VIEWER_BACKEND_PORT}")
+        logger.info("Run 'python kill_backend.py' to terminate the background processes.")
         
 if __name__ == "__main__":
     main()
