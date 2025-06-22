@@ -3,7 +3,7 @@
   "listener_sink_type": "sqlite",
   "ingest_sink_type": "asyncsqlite",
 
-  "backend_endpoint": "http://localhost:8000/event",
+  "backend_endpoint": "http://localhost:8000",
   "sqlite_path": "eventlog.db",
 
   "viewer_backend_host": "127.0.0.1",

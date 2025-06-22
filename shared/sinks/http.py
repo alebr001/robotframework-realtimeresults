@@ -3,7 +3,7 @@ import requests
 from .base import EventSink
 
 class HttpSink(EventSink):
-    def __init__(self, endpoint="http://localhost:8000/event", timeout=0.5):
+    def __init__(self, endpoint="http://localhost:8000", timeout=0.5):
         super().__init__()
         self.endpoint = endpoint
         self.timeout = timeout
@@ -12,6 +12,6 @@ class HttpSink(EventSink):
     def _handle_event(self, data):
         payload = dict(data)  # shallow copy
         try:
-            requests.post(self.endpoint, json=payload, timeout=self.timeout)
+            requests.post(f"{self.endpoint}/event", json=payload, timeout=self.timeout)
         except requests.RequestException as e:
             self.logger.warning(f"Failed to post event to {self.endpoint}: {e}")

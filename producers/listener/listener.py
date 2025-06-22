@@ -54,7 +54,7 @@ class RealTimeResults:
         
         try:
             if self.listener_sink_type == "backend_http_inmemory":
-                self.sink = HttpSink(endpoint=self.config.get("backend_endpoint", "http://localhost:8000/event"))
+                self.sink = HttpSink(endpoint=self.config.get("backend_endpoint", "http://localhost:8000"))
             elif self.listener_sink_type == "loki":
                 self.endpoint = self.config.get("loki_endpoint", "http://localhost:3100")
                 self.sink = LokiSink(endpoint=self.endpoint)
