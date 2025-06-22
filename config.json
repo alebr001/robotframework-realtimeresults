@@ -6,8 +6,10 @@
   "backend_endpoint": "http://localhost:8000/event",
   "sqlite_path": "eventlog.db",
 
-  "backend_host": "127.0.0.1",
-  "backend_port": 8000,
+  "viewer_backend_host": "127.0.0.1",
+  "viewer_backend_port": 8000,
+  "ingest_backend_host": "127.0.0.1",
+  "ingest_backend_port": 8001,
 
   "loki_endpoint": "http://localhost:3100",
 
