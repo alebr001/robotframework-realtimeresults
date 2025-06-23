@@ -40,11 +40,16 @@ def is_process_running(script_name):
     return False
 
 def start_process(command, silent=True):
-    script_path = Path(command[-1]) if command else None
+    # check if the command contains a python script path
+    script_path = None
+    for part in command:
+        if part.endswith(".py"):
+            script_path = Path(part)
+            break
     # Check if the script exists
     if script_path and not script_path.exists():
         rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
-        logger.error(f"Script {script_path.name} not found: {rel_path}")
+        logger.error(f"{command} not executed: {rel_path}")
         logger.error(f"Please check if the path is correct in your CLI config or code.")
         sys.exit(1)
     # Check if the script is already running
@@ -57,6 +62,7 @@ def start_process(command, silent=True):
                     return None
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 continue
+            
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
