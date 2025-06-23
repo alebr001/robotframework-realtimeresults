@@ -5,7 +5,6 @@
 ## Features
 
 - Realtime test results during execution
-- Dashboard with realtime results
 - Supports multiple storage strategies (in-memory or SQLite database)
 - Backend API with endpoints to retrieve events
 - Automatic backend startup if not already running
