@@ -11,11 +11,11 @@ Example API Call - Root
     Should Be Equal As Integers    ${response.status_code}    200
     Log    Response: ${response.content}
 
-Example API Call - Not Found
+Example API Call - Expected to fail
     Sleep    1s
     Create Session    mysession    http://127.0.0.1:5000
-    ${response}=    GET On Session    mysession    /doesnotexist
-    Should Be Equal As Integers    ${response.status_code}    404
+    ${response}=    GET On Session    mysession    /doesnotexist  expected_status=any
+    Should Be Equal As Integers    ${response.status_code}    200
     Log    Response: ${response.content}
 
 Example 2 API Call - Root
@@ -28,7 +28,7 @@ Example 2 API Call - Root
 Example 2 API Call - Not Found
     Sleep    1s
     Create Session    mysession    http://127.0.0.1:5000
-    ${response}=    GET On Session    mysession    /doesnotexist
+    ${response}=    GET On Session    mysession    /doesnotexist    expected_status=any
     Should Be Equal As Integers    ${response.status_code}    404
     Log    Response: ${response.content}
     
@@ -42,6 +42,6 @@ Example 3 API Call - Root
 Example 3 API Call - Not Found
     Sleep    1s
     Create Session    mysession    http://127.0.0.1:5000
-    ${response}=    GET On Session    mysession    /doesnotexist
+    ${response}=    GET On Session    mysession    /doesnotexist    expected_status=any
     Should Be Equal As Integers    ${response.status_code}    404
     Log    Response: ${response.content}
