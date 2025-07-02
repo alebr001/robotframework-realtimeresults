@@ -25,7 +25,7 @@ class AsyncEventSink(ABC):
     """Base class for asynchronous sinks."""
 
     def __init__(self):
-        config = load_config()
+        # config = load_config()
         self.logger = logging.getLogger("rt.sink")
 
     async def async_handle_event(self, data):

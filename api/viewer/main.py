@@ -3,15 +3,16 @@ import logging
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.sinks.memory_sqlite import MemorySqliteSink
 from shared.helpers.ensure_db_schema import ensure_schema
 
-from fastapi import FastAPI, Request, Response, HTTPException
+from shared.sinks.memory_sqlite import MemorySqliteSink
+from api.viewer.readers.sqlite_reader import SqliteReader
+
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 
-from api.viewer.readers.sqlite_reader import SqliteReader
 
 
 config = load_config()
@@ -34,12 +35,9 @@ listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
 strategy = config.get("backend_strategy", "db").lower()  # http_backend_listener, db, loki
 
-event_sink = None # default
 if strategy == "sqlite":
     if listener_sink_type == "backend_http_inmemory":
-        memory_sink = MemorySqliteSink()
-        event_sink = memory_sink  # used for POST /event
-        event_reader = SqliteReader(conn=memory_sink.get_connection()) # used for GET /events from db
+        event_reader = SqliteReader(conn=MemorySqliteSink().get_connection()) # used for GET /events from db
     if listener_sink_type == "sqlite":
         event_reader = SqliteReader(database_path=db_path) # used for GET /events from db
     else:
@@ -47,26 +45,13 @@ if strategy == "sqlite":
 else:
     raise ValueError(f"Unsupported strategy in config: {strategy}")
 
-@app.post("/event")
-async def receive_event(request: Request):
-    if event_sink is None or not isinstance(event_sink, MemorySqliteSink):
-            raise HTTPException(status_code=405, detail="Writing events is not allowed in persistent mode.")
-
-    event = await request.json()
-    try:
-        event_sink.handle_event(event)
-    except Exception as e:
-        return {"error": str(e)}
-    return {"received": True}
+@app.get("/applog")
+def get_applog():
+    return event_reader.get_app_logs()
 
 @app.get("/events")
 def get_events():
     return event_reader.get_events()
-
-
-@app.get("/applog")
-def get_applog():
-    return event_reader.get_app_logs()
     
 @app.get("/events/clear")
 def clear_events():

@@ -53,6 +53,9 @@ class MemorySqliteSink(EventSink):
         else:
             self.logger.debug("[MEMORY_SQLITE] Ignored unknown event type: %s", event_type)
 
+    def async_handle_event(self, data):
+        raise NotImplementedError("This function is not implemented.")
+
     def _insert_event(self, data):
         tags = data.get("tags", [])
         if not isinstance(tags, list):

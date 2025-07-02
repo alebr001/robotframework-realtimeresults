@@ -4,8 +4,8 @@ from pathlib import Path
 from shared.helpers.ensure_db_schema import ensure_schema
 from .base import EventSink
 from shared.helpers.sql_definitions import (
-    CREATE_EVENTS_TABLE, INSERT_EVENT,
-    CREATE_RF_LOG_MESSAGE_TABLE, INSERT_RF_LOG_MESSAGE
+    INSERT_EVENT,
+    INSERT_RF_LOG_MESSAGE
 )
 
 # SqliteSink (sync variant): intended for Robot Framework listener events only.

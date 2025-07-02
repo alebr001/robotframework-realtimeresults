@@ -25,61 +25,50 @@ component_level_logging = config.get("log_level_cli")
 if component_level_logging:
     logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
-def is_port_open(host, port):
+def is_port_used(command):
+    try:
+        host = command[command.index("--host") + 1]
+        port = int(command[command.index("--port") + 1])
+    except (ValueError, IndexError):
+        raise ValueError("Command must contain --host and --port with values")
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(1)
         return sock.connect_ex((host, port)) == 0
 
-def is_process_running(script_name):
-    for proc in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+def is_process_running(target_name):
+    """
+    Check if a process is running whose command (or script) contains the given name.
+    Returns the PID of the first found process, or None.
+    """
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
         try:
-            if script_name in proc.info['cmdline']:
-                return True
+            cmdline = proc.info['cmdline'] or []
+            if any(target_name in part for part in cmdline):
+                return proc.info['pid']
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
-    return False
+    return None
 
-def start_process(command, silent=True):
-    # check if the command contains a python script path
-    script_path = None
-    for part in command:
-        if part.endswith(".py"):
-            script_path = Path(part)
-            break
-    # Check if the script exists
-    if script_path and not script_path.exists():
-        rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
-        logger.error(f"{command} not executed: {rel_path}")
-        logger.error(f"Please check if the path is correct in your CLI config or code.")
-        sys.exit(1)
-    # Check if the script is already running
-    if script_path and script_path.suffix == ".py":
-        for proc in psutil.process_iter(attrs=["pid", "cmdline"]):
-            try:
-                cmdline = proc.info.get("cmdline") or []
-                if any(script_path.name in part for part in cmdline):
-                    logger.info(f"{script_path.name} is already running with PID {proc.info['pid']}, skipping start.")
-                    return None
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
-            
+def start_process(command, silent=True):   
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
     if platform.system() == "Windows":
-        return subprocess.Popen(
+        proc = subprocess.Popen(
             command,
             creationflags=0x00000200,
             stdout=stdout_dest,
             stderr=stderr_dest
         )
     else:
-        return subprocess.Popen(
+        proc = subprocess.Popen(
             command,
             start_new_session=True,
             stdout=stdout_dest,
             stderr=stderr_dest
         )
+    return proc.pid if proc else None
 
 
 def start_services(silent=True):
@@ -99,36 +88,59 @@ def start_services(silent=True):
         "poetry", "run", "python", "producers/log_producer/log_tails.py"
     ]
 
+    def extract_identifier(command):
+        return next((part for part in command if part.endswith(".py") or ":" in part), None)
+
+    # Define the processes to start
+    processes = {
+        extract_identifier(viewer_cmd): viewer_cmd,
+        extract_identifier(ingest_cmd): ingest_cmd,
+        extract_identifier(logs_tail_cmd): logs_tail_cmd
+    }
+
     pids = {}
+    for name, command in processes.items():
+        # Check if the service is already running on host and port
+        if "--host" in command and "--port" in command:
+            if is_port_used(command):
+                pid = is_process_running(name)
+                logger.info(f"{name} already running on {command[command.index('--host') + 1]}:{command[command.index('--port') + 1]} with PID {pid}")
+                pids[name] = pid
+                continue
 
-    if not is_port_open(VIEWER_BACKEND_HOST, VIEWER_BACKEND_PORT):
-        proc = start_process(viewer_cmd)
-        if proc is not None:
-            pids["viewer"] = proc.pid
-            logger.info("Started viewer backend")
+        # If the command does not contain host or port, we assume it's a simple script path
         else:
-            logger.error("Failed to start viewer backend.")
+            script_path = Path(name) if name else None
+            # Check if the script exists
+            if script_path and not script_path.exists():
+                rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
+                logger.error(f"{command} not executed: {rel_path}")
+                logger.error(f"Please check if the path is correct in your CLI config or code.")
+                sys.exit(1)
 
-    if not is_port_open(INGEST_BACKEND_HOST, INGEST_BACKEND_PORT):
-        proc = start_process(ingest_cmd)
-        if proc is not None:
-            pids["ingest"] = proc.pid
-            logger.info("Started ingest backend")
+            pid = is_process_running(name)
+            if pid:
+                logger.info(f"{name} already running with PID {pid}")
+                pids[name] = pid
+                continue
+
+        # If the service is not running, start it
+        pid = start_process(command)
+        if pid:
+            pids[name] = pid
+            logger.info(f"Started {name} backend with PID {pid}")
         else:
-            logger.error("Failed to start ingest backend.")
+            logger.error(f"Failed to start {name} backend.")
+            sys.exit(1)
 
-    proc = start_process(logs_tail_cmd)
-    if proc is not None:
-        pids["logs_tail"] = proc.pid
-        logger.info("Started logs tail")
+    if pids:
+        with open("backend.pid", "w") as f:
+            for name, pid in pids.items():
+                f.write(f"{name}={pid}\n")
 
-    with open("backend.pid", "w") as f:
-        for name, pid in pids.items():
-            f.write(f"{name}={pid}\n")
-
-    #wait for the services to listen
+     #wait for the services to listen
     for _ in range(20):
-        if is_port_open(VIEWER_BACKEND_HOST, VIEWER_BACKEND_PORT) and is_port_open(INGEST_BACKEND_HOST, INGEST_BACKEND_PORT):
+        if is_port_used(viewer_cmd) and is_port_used(ingest_cmd):
             return pids
         time.sleep(0.25)
 

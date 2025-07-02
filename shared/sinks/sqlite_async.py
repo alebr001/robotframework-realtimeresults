@@ -4,8 +4,6 @@ from pathlib import Path
 from shared.helpers.ensure_db_schema import async_ensure_schema
 from .base import AsyncEventSink
 from shared.helpers.sql_definitions import (
-    CREATE_APP_LOG_TABLE,
-    CREATE_METRIC_TABLE,
     INSERT_APP_LOG,
     INSERT_METRIC,
 )
@@ -20,6 +18,7 @@ class AsyncSqliteSink(AsyncEventSink):
         self.database_path = Path(database_path)
         self.dispatch_map = {
             "app_log": self._handle_app_log,
+            "www_log": self._handle_app_log,  # Alias for app_log
             "metric": self._handle_metric,
         }
         self.logger.debug("Async sink writing to: %s", self.database_path.resolve())
@@ -31,6 +30,9 @@ class AsyncSqliteSink(AsyncEventSink):
             self.logger.warning("[SQLITE_ASYNC] Failed to initialize DB: %s", e)
             raise
 
+    def handle_event(self, data):
+        raise NotImplementedError("This function is not implemented.")
+    
     async def _async_handle_event(self, data):
         event_type = data.get("event_type")
         handler = self.dispatch_map.get(event_type)

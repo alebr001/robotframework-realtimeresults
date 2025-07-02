@@ -15,13 +15,6 @@
             color: #333;
         }
 
-        #statusChart {
-            width: 100%;
-            height: 40vh;
-            max-height: 400px;
-            display: block;
-        }
-
         button {
             margin-bottom: 2rem;
             padding: 0.5rem 1rem;
@@ -52,6 +45,35 @@
         th {
             background-color: #f0f0f0;
         }
+
+        #dashboard-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        #chartContainer {
+            flex: 2;
+            width: 25%;
+        }
+
+        #statusChart {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        #logMessages {
+            flex: 2;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #fff;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-line;
+        }
     </style>
 </head>
 <body>
@@ -60,7 +82,14 @@
     <strong>Totale tijd:</strong> <span id="elapsed-display">0s</span>
     </div>
 
-    <canvas id="statusChart"></canvas>
+    <div id="dashboard-container">
+        <div id="chartContainer">
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div id="logMessages">
+            <!-- Logberichten verschijnen hier -->
+        </div>
+    </div>
 
     <button onclick="clearEvents()">Clear events</button>
 
@@ -80,6 +109,20 @@
     <script>
         let chart;
 
+        function updateLogMessages(events) {
+            const logContainer = document.getElementById("logMessages");
+
+            const logs = events.map(e => {
+                const date = e.timestamp ?? "";
+                const level = e.level ?? "";
+                const type = e.event_type ?? "";
+                const msg = e.message ?? "";
+                return `${date} | ${level} | ${type} | ${msg}`;
+            }).join('\n');
+
+            logContainer.textContent = logs;
+        }
+
         async function clearEvents() {
             const response = await fetch("/events/clear");
             if (response.ok) {
@@ -92,6 +135,11 @@
 
         async function fetchEvents() {
             const response = await fetch("/events");
+            return await response.json();
+        }
+
+         async function fetchAppLog() {
+            const response = await fetch("/applog");
             return await response.json();
         }
 
@@ -171,6 +219,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,  // <- cruciaal
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -182,6 +231,18 @@
                     }
                 }
             });
+        }
+
+        async function initLogContainer() {
+            const logContainer = document.getElementById("logMessages");
+            logContainer.innerHTML = "";  // Clear existing logs
+
+            const logs = await fetchAppLog();
+            for (const log of logs) {
+                const logEntry = document.createElement("div");
+                logEntry.textContent = log.message;
+                logContainer.appendChild(logEntry);
+            }
         }
 
         let suiteStartTime = null;
@@ -210,14 +271,18 @@
         async function pollForUpdates() {
             const events = await fetchEvents();
             const grouped = groupByStatus(events);
+            const appLogs = await fetchAppLog();
+
             updateChartData(grouped);
             updateFailTable(events);
+            updateLogMessages(appLogs);
 
             extractSuiteTimestamps(events);
             updateElapsedTime();
         }
 
         initChart();
+        initLogContainer();
         setInterval(pollForUpdates, 1000);
     </script>
 </body>

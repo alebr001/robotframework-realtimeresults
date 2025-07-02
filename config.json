@@ -20,13 +20,13 @@
 
   "source_log_tails": [
     {
-      "log_path": "../flask-logging-demo/single_file_app_pattern/app.log",
+      "path": "../flask-logging-demo/single_file_app_pattern/app.log",
       "label": "flask-app",
       "poll_interval": 1.0,
       "event_type": "app_log",
       "log_level": "INFO"
-    },
-    {
+    }
+    , {
       "path": "../flask-logging-demo/single_file_app_pattern/www.log",
       "label": "flask-www",
       "poll_interval": 1.0,
