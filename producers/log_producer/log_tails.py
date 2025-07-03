@@ -6,8 +6,8 @@ from shared.helpers.config_loader import load_config
 from shared.helpers.log_line_parser import extract_timestamp_and_clean_message
 from shared.sinks.http import AsyncHttpSink
 
-async def post_log(message: str, source_label: str, event_type: str , sink: AsyncHttpSink):
-    timestamp, log_level, cleaned_message = extract_timestamp_and_clean_message(message)
+async def post_log(message: str, source_label: str, event_type: str, tz_info: str, sink: AsyncHttpSink):
+    timestamp, log_level, cleaned_message = extract_timestamp_and_clean_message(message, tz_info=tz_info)
     if isinstance(cleaned_message, tuple):
         cleaned_message = " ".join(cleaned_message)
     print(f"TIMESTAMP: {timestamp}")
@@ -30,25 +30,36 @@ async def tail_log_file(source: dict, sink):
     log_path = Path(source["path"])
     label = source.get("label", "unknown")
     event_type = source.get("event_type", "unknown")
-    
     poll_interval = float(source.get("poll_interval", 1.0))
-    last_size = log_path.stat().st_size if log_path.exists() else 0
+    
+    # Timezone defaults to Europe/Amsterdam if not specified
+    tz_info = source.get("tz_info", "Europe/Amsterdam")
 
-    print(f"[log_tail] Watching {log_path} (label: {label}, interval: {poll_interval}s)")
+    print(f"[log_tail] Watching {log_path} (label: {label}, interval: {poll_interval}s), timezone: {tz_info}, event_type: {event_type}")
+    last_size = 0
+    
+    while not log_path.exists():
+        print(f"[log_tail] File not found: {log_path}. Waiting...")
+        await asyncio.sleep(poll_interval)
+
+    last_size = log_path.stat().st_size
 
     while True:
         await asyncio.sleep(poll_interval)
-        size = log_path.stat().st_size
-        if size > last_size:
-            with log_path.open("r", encoding="utf-8", errors="replace") as f:
-                f.seek(last_size)
-                new_lines = f.readlines()
-                last_size = size
+        try:
+            size = log_path.stat().st_size
+            if size > last_size:
+                with log_path.open("r", encoding="utf-8", errors="replace") as f:
+                    f.seek(last_size)
+                    new_lines = f.readlines()
+                    last_size = size
 
-                for line in new_lines:
-                    if line.strip():
-                        print(f"[{label}] {line.strip()}")
-                        await post_log(line.strip(), label, event_type, sink)
+                    for line in new_lines:
+                        if line.strip():
+                            print(f"[{label}] {line.strip()}")
+                            await post_log(message=line.strip(), source_label=label, event_type= event_type, tz_info=tz_info, sink=sink)
+        except FileNotFoundError:
+            print(f"[log_tail] File not found again: {log_path}. Will retry.")
 
 async def main():
     config = load_config()

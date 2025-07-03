@@ -24,14 +24,16 @@
       "label": "flask-app",
       "poll_interval": 1.0,
       "event_type": "app_log",
-      "log_level": "INFO"
+      "log_level": "INFO",
+      "tz_info": "Europe/Amsterdam"
     }
     , {
       "path": "../flask-logging-demo/single_file_app_pattern/www.log",
       "label": "flask-www",
       "poll_interval": 1.0,
       "event_type": "www_log",
-      "log_level": "INFO"
+      "log_level": "INFO",
+      "tz_info": "UTC"
     }
   ],
   "log_level": "INFO",
