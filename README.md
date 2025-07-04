@@ -1,6 +1,6 @@
 # RealtimeResults
 
-**RealtimeResults** is a modular system for collecting, processing, and visualizing test results, logs, and metrics in real time. It started as a Robot Framework listener but now supports application log ingestion and metric tracking as well. It works locally and in CI/CD pipelines.
+**RealtimeResults** is a modular system for collecting, processing, and visualizing test results, logs, and metrics in real time. It started as a Robot Framework listener but now also supports application log ingestion and basic metric tracking. It works both locally and in CI/CD pipelines.
 
 ## Features
 
@@ -9,6 +9,7 @@
 - Combine test events, log lines, and metrics in one system
 - Pluggable sinks (SQLite now, Loki planned)
 - Supports multiple log sources (files, etc.)
+- Metric ingestion (basic support, dashboard integration planned)
 
 ## Installation
 
@@ -17,6 +18,8 @@
 ```bash
 pip install robotframework-realtimeresults
 ```
+
+> Requires Python 3.9 or later. Tested on Python 3.9–3.12.
 
 ### Option 2: Clone the repository for local development
 
@@ -28,8 +31,6 @@ poetry install
 poetry run rt-robot tests/
 ```
 
-> Python 3.9+ and [Poetry](https://python-poetry.org/) are required for local development.
-
 ## CLI usage
 
 After installing the package, you can use the `rt-robot` command to run your test suite:
@@ -38,9 +39,9 @@ After installing the package, you can use the `rt-robot` command to run your tes
 rt-robot tests/
 ```
 
-`rt-robot` is a wrapper around `robot`
+The `rt-robot` command is a wrapper around the `robot` command.
 
-It starts required services like the backend APIs and log tailers if they are not already running
+It automatically starts required services like the backend APIs and log tailers if they are not already running.
 
 If no config file exists, a setup wizard is launched interactively.
 
@@ -61,10 +62,20 @@ python producers/log_producer/log_tails.py
 
 ### Custom config path
 
-To run with a custom configuration file instead of the default `realtimeresults_config.json`:
+To run with a custom configuration file instead of the default `realtimeresults_config.json` you can use json or toml:
 
 ```bash
 rt-robot --config path/to/custom_config.json tests/
+```
+
+### Stop all services started by the CLI
+
+When `rt-robot` starts backend services automatically, it records their PIDs in a file called `backend.pid`.
+
+You can stop them by running:
+
+```bash
+python kill_backend.py
 ```
 
 ## Project structure
@@ -136,12 +147,6 @@ The dashboard shows:
 - Error messages
 - Suite execution time
 - Application logs and metrics (if configured)
-
-## Development notes
-
-- Ports and processes are checked automatically by the CLI.
-- Started background services are written to `backend.pid`.
-- Run `kill_backend.py` to stop all services started by the CLI.
 
 ## Planned features
 
