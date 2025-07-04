@@ -72,7 +72,7 @@ async def main():
     sources = config.get("source_log_tails", [])
     if not sources:
         print("[log_tail] No source_log_tails defined in config.")
-        sys.exit(1)
+        sys.exit(10)
 
     # Ensure all sources have required fields
     async def safe_tail(source):

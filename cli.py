@@ -72,25 +72,37 @@ def is_process_running(target_name):
             continue
     return None
 
-def start_process(command, silent=True):   
+def start_process(command, silent=True):
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
-    if platform.system() == "Windows":
-        proc = subprocess.Popen(
-            command,
-            creationflags=0x00000200,
-            stdout=stdout_dest,
-            stderr=stderr_dest
-        )
-    else:
-        proc = subprocess.Popen(
-            command,
-            start_new_session=True,
-            stdout=stdout_dest,
-            stderr=stderr_dest
-        )
-    return proc.pid if proc else None
+    try:
+        # Start subprocess with platform-specific behavior
+        if platform.system() == "Windows":
+            proc = subprocess.Popen(
+                command,
+                creationflags=0x00000200,  # CREATE_NEW_PROCESS_GROUP
+                stdout=stdout_dest,
+                stderr=stderr_dest
+            )
+        else:
+            proc = subprocess.Popen(
+                command,
+                start_new_session=True,  # Start in new process group on Unix
+                stdout=stdout_dest,
+                stderr=stderr_dest
+            )
+        # Give the process a brief moment to initialize or exit
+        time.sleep(0.5)
+        # Check if the process exited immediately
+        if proc.poll() is not None:  # Poll returns None if process is still running
+            if proc.returncode == 10:
+                return "optional"  # Optional process exited early (e.g., no work to do)
+            return None  # Process failed or exited with not anticipated code
+        return proc.pid  # Process started successfully, return its PID
+    except Exception as e:
+        logger.error(f"Failed to start process: {command} — {e}")
+        return None  # Any exception during startup is treated as failure
 
 
 def start_services(silent=True):
@@ -138,6 +150,7 @@ def start_services(silent=True):
                 rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
                 logger.error(f"{command} not executed: {rel_path}")
                 logger.error(f"Please check if the path is correct in your CLI config or code.")
+                sys.exit(1)
 
             pid = is_process_running(name)
             if pid:
@@ -146,8 +159,12 @@ def start_services(silent=True):
                 continue
 
         # If the service is not running, start it
-        pid = start_process(command)
-        if pid:
+        pid = start_process(command, silent=False)
+
+        if pid == "optional":
+            logger.info(f"{name} is an optional service, skipping start.")
+            continue
+        elif pid:
             pids[name] = pid
             logger.info(f"Started {name} backend with PID {pid}")
         else:
