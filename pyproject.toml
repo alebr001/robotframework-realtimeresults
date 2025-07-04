@@ -10,20 +10,17 @@ packages = [
     { include = "producers" },
     { include = "shared" },
     { include = "cli.py" }
-]
+    ]
 
 [tool.poetry.dependencies]
 python = "^3.9"
 fastapi = "^0.115.0"
 uvicorn = "^0.34.0"
 requests = "^2.31.0"
-httpcore = "^1.0.9"
 httpx = "^0.28.1"
 aiosqlite = "^0.21.0"
 robotframework-requests = "^0.9.7"
 psutil = "^7.0.0"
-dateutils = "^0.6.12"
-dateparser = "^1.2.1"
 
 [tool.poetry.group.dev.dependencies]
 robotframework = "^7.2.2"
