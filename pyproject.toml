@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "robotframework-realtimeresults"
+version = "0.2.0"
+description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
+authors = ["Jurgen Alebregtse j.alebregtse@gmail.com"]
+license = "MIT"
+packages = [
+    { include = "api" },
+    { include = "dashboard" },
+    { include = "producers" },
+    { include = "shared" },
+    { include = "cli.py" }
+    ]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.115.0"
+uvicorn = "^0.34.0"
+requests = "^2.31.0"
+httpx = "^0.28.1"
+aiosqlite = "^0.21.0"
+robotframework-requests = "^0.9.7"
+psutil = "^7.0.0"
+
+[tool.poetry.group.dev.dependencies]
+robotframework = "^7.2.2"
+pytest = "^8.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+rt-robot = "cli:main"

@@ -172,3 +172,15 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+#robotframework
+log.html
+output.xml
+report.html
+*.db
+backend.pid
+*config.json
+
+#os
+.DS_Store

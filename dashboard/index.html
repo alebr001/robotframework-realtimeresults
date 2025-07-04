@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RealtimeResults Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+            background-color: #f9f9f9;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        button {
+            margin-bottom: 2rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        #dashboard-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        #chartContainer {
+            flex: 2;
+            width: 25%;
+        }
+
+        #statusChart {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        #logMessages {
+            flex: 2;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #fff;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <h1>Realtime Test Result Overview</h1>
+    <div id="elapsed-container">
+    <strong>Totale tijd:</strong> <span id="elapsed-display">0s</span>
+    </div>
+
+    <div id="dashboard-container">
+        <div id="chartContainer">
+            <canvas id="statusChart"></canvas>
+        </div>
+        <div id="logMessages">
+            <!-- Logberichten verschijnen hier -->
+        </div>
+    </div>
+
+    <button onclick="clearEvents()">Clear events</button>
+
+    <h2>Mislukte tests</h2>
+    <table id="failTable">
+        <thead>
+            <tr>
+                <th>Tijdstip</th>
+                <th>Testcase</th>
+                <th>Suite</th>
+                <th>Foutmelding</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let chart;
+
+        function updateLogMessages(events) {
+            const logContainer = document.getElementById("logMessages");
+
+            const logs = events.map(e => {
+                const date = e.timestamp ?? "";
+                const level = e.level ?? "";
+                const type = e.event_type ?? "";
+                const msg = e.message ?? "";
+                return `${date} | ${level} | ${type} | ${msg}`;
+            }).join('\n');
+
+            logContainer.textContent = logs;
+        }
+
+        async function clearEvents() {
+            const response = await fetch("/events/clear");
+            if (response.ok) {
+                console.log("Events cleared");
+                await pollForUpdates();
+            } else {
+                console.error("Failed to clear events");
+            }
+        }
+
+        async function fetchEvents() {
+            const response = await fetch("/events");
+            return await response.json();
+        }
+
+         async function fetchAppLog() {
+            const response = await fetch("/applog");
+            return await response.json();
+        }
+
+        function groupByStatus(events) {
+            const counts = { PASS: 0, FAIL: 0, SKIP: 0 };
+            for (const e of events) {
+                if (e.event_type === "end_test") {
+                    counts[e.status] = (counts[e.status] || 0) + 1;
+                }
+            }
+            return counts;
+        }
+
+        function updateChartData(data) {
+            const counts = Object.values(data);
+            const maxCount = Math.max(...counts);
+            const newMax = Math.ceil((maxCount + 1) / 5) * 5;
+
+            chart.data.labels = Object.keys(data);
+            chart.data.datasets[0].data = counts;
+
+            chart.options.scales.y = {
+                min: 0,
+                max: newMax,
+                ticks: {
+                    precision: 0,
+                    stepSize: 1
+                }
+            };
+
+            chart.update();
+        }
+
+        function updateFailTable(events) {
+            const tableBody = document.querySelector("#failTable tbody");
+            tableBody.innerHTML = "";
+
+            const failures = events.filter(e => e.event_type === "end_test" && e.status === "FAIL");
+
+            for (const fail of failures) {
+                const row = document.createElement("tr");
+
+                const timeCell = document.createElement("td");
+                timeCell.textContent = fail.timestamp || "(geen tijd)";
+
+                const nameCell = document.createElement("td");
+                nameCell.textContent = fail.name;
+
+                const suiteCell = document.createElement("td");
+                suiteCell.textContent = fail.suite || "(onbekend)";
+
+                const msgCell = document.createElement("td");
+                msgCell.textContent = fail.message || "(geen foutmelding)";
+
+                row.appendChild(timeCell);
+                row.appendChild(nameCell);
+                row.appendChild(suiteCell);
+                row.appendChild(msgCell);
+                tableBody.appendChild(row);
+            }
+        }
+
+        async function initChart() {
+            const events = await fetchEvents();
+            const data = groupByStatus(events);
+
+            const ctx = document.getElementById("statusChart").getContext("2d");
+            chart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: "Aantal tests per status",
+                        data: Object.values(data),
+                        backgroundColor: ["green", "red", "gray"]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,  // <- cruciaal
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initLogContainer() {
+            const logContainer = document.getElementById("logMessages");
+            logContainer.innerHTML = "";  // Clear existing logs
+
+            const logs = await fetchAppLog();
+            for (const log of logs) {
+                const logEntry = document.createElement("div");
+                logEntry.textContent = log.message;
+                logContainer.appendChild(logEntry);
+            }
+        }
+
+        let suiteStartTime = null;
+        let suiteEndTime = null;
+
+        function extractSuiteTimestamps(events) {
+            const startSuite = events.find(e => e.event_type === "start_suite");
+            const endSuite = events.find(e => e.event_type === "end_suite");
+
+            if (startSuite) suiteStartTime = new Date(startSuite.timestamp);
+            if (endSuite) suiteEndTime = new Date(endSuite.timestamp);
+        }
+
+        function updateElapsedTime() {
+            const display = document.getElementById("elapsed-display");
+            if (!suiteStartTime) {
+                display.textContent = "—";
+                return;
+            }
+
+            const now = suiteEndTime ? suiteEndTime : new Date();
+            const seconds = Math.floor((now - suiteStartTime) / 1000);
+            display.textContent = `${seconds}s`;
+        }
+
+        async function pollForUpdates() {
+            const events = await fetchEvents();
+            const grouped = groupByStatus(events);
+            const appLogs = await fetchAppLog();
+
+            updateChartData(grouped);
+            updateFailTable(events);
+            updateLogMessages(appLogs);
+
+            extractSuiteTimestamps(events);
+            updateElapsedTime();
+        }
+
+        initChart();
+        initLogContainer();
+        setInterval(pollForUpdates, 1000);
+    </script>
+</body>
+</html>
