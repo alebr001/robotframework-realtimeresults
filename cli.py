@@ -92,14 +92,13 @@ def start_process(command, silent=True):
                 stdout=stdout_dest,
                 stderr=stderr_dest
             )
-        # Give the process a brief moment to initialize or exit
-        time.sleep(0.5)
-        # Check if the process exited immediately
-        if proc.poll() is not None:  # Poll returns None if process is still running
+        try:
+            proc.wait(timeout=0.2)  # wait max 200 ms for process to stop
             if proc.returncode == 10:
-                return "optional"  # Optional process exited early (e.g., no work to do)
-            return None  # Process failed or exited with not anticipated code
-        return proc.pid  # Process started successfully, return its PID
+                return "optional"
+            return None  # Proces stopts with other code
+        except subprocess.TimeoutExpired:
+            return proc.pid  # Process started successfully, return its PID
     except Exception as e:
         logger.error(f"Failed to start process: {command} — {e}")
         return None  # Any exception during startup is treated as failure
