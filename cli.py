@@ -92,13 +92,7 @@ def start_process(command, silent=True):
                 stdout=stdout_dest,
                 stderr=stderr_dest
             )
-        try:
-            proc.wait(timeout=0.2)  # wait max 200 ms for process to stop
-            if proc.returncode == 10:
-                return "optional"
-            return None  # Proces stopts with other code
-        except subprocess.TimeoutExpired:
-            return proc.pid  # Process started successfully, return its PID
+        return proc.pid  # Process started successfully, return its PID
     except Exception as e:
         logger.error(f"Failed to start process: {command} — {e}")
         return None  # Any exception during startup is treated as failure
@@ -115,6 +109,7 @@ def start_services(silent=True):
         "poetry", "run", "uvicorn", "api.ingest.main:app",
         "--host", INGEST_BACKEND_HOST, "--port", str(INGEST_BACKEND_PORT), "--reload"
     ]
+
     # Command to start the log tailing process
     # More then one logfile can be tailed, configure in the realtimeresults_config.json
     logs_tail_cmd = [
@@ -124,12 +119,14 @@ def start_services(silent=True):
     def extract_identifier(command):
         return next((part for part in command if part.endswith(".py") or ":" in part), None)
 
-    # Define the processes to start
+    # add commands to list to run
     processes = {
-        extract_identifier(viewer_cmd): viewer_cmd,
-        extract_identifier(ingest_cmd): ingest_cmd,
-        extract_identifier(logs_tail_cmd): logs_tail_cmd
+    extract_identifier(viewer_cmd): viewer_cmd,
+    extract_identifier(ingest_cmd): ingest_cmd,
     }
+    # if there are no source log tails in config then do not add cmd for tail
+    if config.get("source_log_tails"): processes[extract_identifier(logs_tail_cmd)] = logs_tail_cmd
+
 
     pids = {}
     for name, command in processes.items():
@@ -158,16 +155,13 @@ def start_services(silent=True):
                 continue
 
         # If the service is not running, start it
-        pid = start_process(command, silent=False)
+        pid = start_process(command)
 
-        if pid == "optional":
-            logger.info(f"{name} is an optional service, skipping start.")
-            continue
-        elif pid:
+        if pid:
             pids[name] = pid
             logger.info(f"Started {name} backend with PID {pid}")
         else:
-            logger.error(f"Failed to start {name} backend.")
+            logger.exception(f"Failed to start {name} backend.")
             sys.exit(1)
 
     if pids:
