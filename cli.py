@@ -138,7 +138,6 @@ def start_services(silent=True):
                 rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
                 logger.error(f"{command} not executed: {rel_path}")
                 logger.error(f"Please check if the path is correct in your CLI config or code.")
-                sys.exit(1)
 
             pid = is_process_running(name)
             if pid:
@@ -187,6 +186,8 @@ def main():
 
     logger.debug(f"Viewer: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}")
     logger.debug(f"Ingest: http://{INGEST_BACKEND_HOST}:{INGEST_BACKEND_PORT}")
+    logger.info(f"Dashboard: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}/dashboard")
+
 
     command = [
         "robot",
