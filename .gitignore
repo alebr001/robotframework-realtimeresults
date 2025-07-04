@@ -180,6 +180,7 @@ output.xml
 report.html
 *.db
 backend.pid
+*config.json
 
 #os
 .DS_Store
