@@ -80,9 +80,9 @@ This will:
 
 ## Configuration
 
-The `config.json` supports the following options:
+The Config supports json and toml and has the following options:
 
-```json
+```json example
 {
   "backend_strategy": "sqlite", // Options: sqlite (default), loki (planned), etc.
   "listener_sink_type": "sqlite", // Options: sqlite (default), backend_http_inmemory, loki (planned), etc.

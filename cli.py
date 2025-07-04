@@ -10,8 +10,30 @@ from pathlib import Path
 from shared.helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
 from shared.helpers.logger import setup_root_logging
+from shared.helpers.setup_wizard import run_setup_wizard
 
-config = load_config()
+# Split off our own --config argument, everything else is passed to robot
+if "--config" in sys.argv:
+    config_index = sys.argv.index("--config")
+    config_path = sys.argv[config_index + 1]
+    robot_args = sys.argv[1:config_index] + sys.argv[config_index + 2:] # 1:config_index = everything before --config, config_index + 2: = everything after the config path
+else:
+    config_path = "realtimeresults_config.json"
+    robot_args = sys.argv[1:]
+
+
+CONFIG_PATH = Path(config_path)
+
+# Run wizard if config is missing
+if not CONFIG_PATH.exists():
+    print(f"No config found at {CONFIG_PATH}. Launching setup wizard...")
+    run_tests = run_setup_wizard(CONFIG_PATH)
+    if not run_tests:
+        print(f"Please run the command again to run tests.")
+        sys.exit(0)
+
+config = load_config(CONFIG_PATH)
+
 VIEWER_BACKEND_HOST = config.get("viewer_backend_host", "127.0.0.1")
 VIEWER_BACKEND_PORT = int(config.get("viewer_backend_port", 8000))
 
@@ -83,7 +105,7 @@ def start_services(silent=True):
         "--host", INGEST_BACKEND_HOST, "--port", str(INGEST_BACKEND_PORT), "--reload"
     ]
     # Command to start the log tailing process
-    # More then one logfile can be tailed, configure in the config.json
+    # More then one logfile can be tailed, configure in the realtimeresults_config.json
     logs_tail_cmd = [
         "poetry", "run", "python", "producers/log_producer/log_tails.py"
     ]
@@ -169,7 +191,7 @@ def main():
     command = [
         "robot",
         "--listener", f"producers.listener.listener.RealTimeResults:totaltests={total}"
-    ] + args
+    ] + robot_args
 
     try:
         subprocess.run(command)
