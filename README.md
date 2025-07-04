@@ -1,167 +1,154 @@
 # RealtimeResults
 
-**RealtimeResults** is an extension for Robot Framework that lets you monitor test execution live through a realtime dashboard or send realtime results to an external source. The project consists of a listener, a backend (API + storage), and a frontend dashboard built with HTML/JavaScript.
+**RealtimeResults** is a modular system for collecting, processing, and visualizing test results, logs, and metrics in real time. It started as a Robot Framework listener but now supports application log ingestion and metric tracking as well. It works locally and in CI/CD pipelines.
 
 ## Features
 
-- Realtime test results during execution
-- Supports multiple storage strategies (in-memory or SQLite database)
-- Backend API with endpoints to retrieve events
-- Automatic backend startup if not already running
-
----
-
-## Structure
-
-```
-realtimeresults/
-|
-├── backend/
-│   ├── ingest/
-│   │   ├── reader/
-│   │   │   └── sqlite_event_reader.py
-│   │   └── source/
-│   │       └── log_tail.py
-│   ├── sinks/
-|   |   └── memory_sqlite.py
-|   └── main.py                             # Backend API
-|
-├── dashboard/            
-│   └── index.html                          # HTML frontend dashboard
-|
-├── listener/
-│   ├── realtime_listener.py
-│   ├── sqlite_sink.py
-│   ├── memory_sqlite_sink.py
-|
-├── realtimeresults/
-│   └── sinks/
-|   |   ├── base.py
-|   |   ├── sqlite.py
-|   |   └── http.py
-│   └── listener.py                          # Robot Framework listener
-│
-├── cli.py                                   # Entrypoint & CLI wrapper
-├── pyproject.toml
-└── README.md
-```
-
----
+- Realtime dashboard for Robot Framework test runs
+- Automatic startup of backend services (if needed)
+- Combine test events, log lines, and metrics in one system
+- Pluggable sinks (SQLite now, Loki planned)
+- Supports multiple log sources (files, etc.)
 
 ## Installation
 
-1. Clone the repository:
+### Option 1: Install from PyPI
 
 ```bash
-git clone https://github.com/yourusername/realtimeresults.git
-cd realtimeresults
+pip install robotframework-realtimeresults
 ```
 
-2. Install dependencies via [Poetry](https://python-poetry.org/):
+### Option 2: Clone the repository for local development
+
 ```bash
+git clone https://github.com/alebr001/robotframework-realtimeresults
+cd robotframework-realtimeresults
+pip install poetry
 poetry install
-```
-
-3. Run Robot Framework tests with rt-robot
-Use the cli wrapper instead of calling `robot` directly:
-```bash
 poetry run rt-robot tests/
 ```
----
 
+> Python 3.9+ and [Poetry](https://python-poetry.org/) are required for local development.
 
-This will:
+## CLI usage
 
-- Start the backend on http://127.0.0.1:8000 (if not already running)
-- Start the test run with realtime event publishing
-- Launch the live dashboard at http://127.0.0.1:8000/dashboard
+After installing the package, you can use the `rt-robot` command to run your test suite:
 
----
+```bash
+rt-robot tests/
+```
+
+`rt-robot` is a wrapper around `robot`
+
+It starts required services like the backend APIs and log tailers if they are not already running
+
+If no config file exists, a setup wizard is launched interactively.
+
+### Preferred usage
+
+While `rt-robot` can automatically start all required services, the preferred approach is to start the services manually in separate terminals for better visibility and control:
+
+```bash
+# Terminal 1
+uvicorn api.viewer.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Terminal 2
+uvicorn api.ingest.main:app --host 127.0.0.1 --port 8001 --reload
+
+# Terminal 3 (optional, if using applog ingestion)
+python producers/log_producer/log_tails.py
+```
+
+### Custom config path
+
+To run with a custom configuration file instead of the default `realtimeresults_config.json`:
+
+```bash
+rt-robot --config path/to/custom_config.json tests/
+```
+
+## Project structure
+
+```
+.
+├── api/
+│   ├── ingest/         # Log + metric ingestion API
+│   └── viewer/         # Dashboard and query API
+├── dashboard/          # Static frontend dashboard
+├── producers/
+│   ├── listener/       # Robot Framework listener
+│   └── log_producer/   # Tail logfiles and send to backend
+├── shared/
+│   └── helpers/        # Config loader, setup wizard, logging
+│   └── sinks/          # http (sync/async), sqlite (sync/async/memory), loki (to be implemented)
+├── cli.py              # CLI entrypoint
+└── pyproject.toml
+```
 
 ## Configuration
 
-The Config supports json and toml and has the following options:
+When no config file is found, the CLI generates one using an interactive wizard. Example:
 
-```json example
+```json
 {
-  "backend_strategy": "sqlite", // Options: sqlite (default), loki (planned), etc.
-  "listener_sink_type": "sqlite", // Options: sqlite (default), backend_http_inmemory, loki (planned), etc.
-
-  "backend_endpoint": "http://localhost:8000/event",
+  "backend_strategy": "sqlite",
+  "listener_sink_type": "sqlite",
   "sqlite_path": "eventlog.db",
-
-  "backend_host": "127.0.0.1",
-  "backend_port": 8000,
-
-  "source_log_type": "file", 
-  "source_log_path": "source.log",
-  
-  "log_level": "INFO",
-  "log_level_listener": "",
-  "log_level_backend": "",
-  "log_level_cli": ""
+  "viewer_backend_host": "127.0.0.1",
+  "viewer_backend_port": 8000,
+  "ingest_backend_host": "127.0.0.1",
+  "ingest_backend_port": 8001,
+  "source_log_tails": [
+    {
+      "path": "../logs/app.log",
+      "label": "app",
+      "poll_interval": 1.0,
+      "event_type": "app_log",
+      "log_level": "INFO",
+      "tz_info": "Europe/Amsterdam"
+    }
+  ],
+  "log_level": "INFO"
 }
 ```
-### Sink Strategy Overview
 
-The following combinations of `backend_strategy` and `listener_sink_type` define how test events are stored and routed during execution:
+## Sink strategy overview
 
 | `backend_strategy` | `listener_sink_type`      | Behavior                                                                 |
 |--------------------|---------------------------|--------------------------------------------------------------------------|
-| `sqlite`           | `sqlite`                  | Listener writes directly to a local SQLite file (defined by `sqlite_path`). Backend only reads. |
-| `sqlite`           | `backend_http_inmemory`   | Listener sends events via HTTP POST to the backend. Backend keeps events in memory (`MemorySqliteSink`). Suitable for dashboards during live test runs. |
-| `sqlite`           | `loki` *(planned)*        | Listener sends logs to a Loki server. Backend does not receive test events. |
-| `loki` *(planned)* | `loki` *(planned)*        | Intended for future support where both listener and backend interact with Loki via Grafana queries. |
+| `sqlite`           | `sqlite`                  | Listener writes to local SQLite file; backend reads only                 |
+| `sqlite`           | `backend_http_inmemory`   | Listener sends events via HTTP; backend keeps data in memory only       |
+| `sqlite`           | `loki` *(planned)*        | Listener sends logs to Loki; backend is bypassed                         |
 
-### Notes
-
-- When using `listener_sink_type: backend_http_inmemory`, the backend uses an **in-memory** SQLite database. No data is persisted after shutdown.
-- Writing to the backend via `/event` is **disabled** for persistent strategies (e.g. `listener_sink_type: sqlite`) to avoid unintentional data corruption or inconsistencies.
-- Loki support is not yet implemented but planned for a future release. This will enable log-based dashboards using the Grafana stack.
-
----
-
-## Useful Commands
-
-### Manually start the backend:
-
-```bash
-poetry run uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-### Show logs from background backend (after test run):
-
-```bash
-cat backend.pid
-# then:
-kill -9 <PID>    # to stop it
-```
-
----
+Note: When using `backend_http_inmemory`, the data is not persisted.
 
 ## Dashboard
 
-- Realtime visualization of:
-  - Number of tests per status (PASS, FAIL, SKIP)
-  - Table with error messages
-  - Total elapsed suite time
-
-Open the dashboard in your browser:
+Open the live dashboard in your browser:
 
 ```
 http://127.0.0.1:8000/dashboard
 ```
 
----
+The dashboard shows:
 
-## TODO
+- Test status (PASS/FAIL/SKIP)
+- Error messages
+- Suite execution time
+- Application logs and metrics (if configured)
 
-- Support for grouping multiple test projects in parallel
-- Improved filtering/tag support
-- Integration with Loki for application logs
+## Development notes
 
----
+- Ports and processes are checked automatically by the CLI.
+- Started background services are written to `backend.pid`.
+- Run `kill_backend.py` to stop all services started by the CLI.
+
+## Planned features
+
+- Improved dashboard filtering and tags
+- Loki integration with Grafana
+- Optional authentication for the API
 
 ## License
 
-MIT — feel free to use and adapt.
+MIT — use and modify freely.
