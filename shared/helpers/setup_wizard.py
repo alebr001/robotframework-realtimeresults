@@ -32,6 +32,7 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
     try:
         print("Welcome to the RealtimeResults setup wizard.")
         print("This wizard will help you generate a realtimeresults config file.")
+        print("Json and toml formats are supported. Default config is realtimeresults_config.json.")
 
         config = {}
 
