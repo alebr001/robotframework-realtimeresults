@@ -23,21 +23,19 @@
 ```
 [ Robot Framework Run ]
         │
-        ▼
-[ Listener (RealTimeResults) ]
         │
-        ├──► Writes to (SQLite or HTTP FastAPI) ──►  Event Store 
-        │                                             ▲
-        │                                             │
-        └─────────────► [ Log Tailer(s) ] ────────────┘
-                                                          │
-                                               Reads from │ (or writes in case of in-memory mode)
-                                                          ▼
-                                                 [ FastAPI Backend ]
-                                                          │
-                                                Serves data to Dashboard
-                                                          ▼
-                                                   [ Dashboard UI ]
+        ├──► Listener writes to (SQLite / FastApi Ingest) ──►  Event Store 
+        │                                                      ▲  │
+        │                                                      │  │
+        └─────► [ Log Tailer(s) (FastApi Ingest) ] ────────────┘  │
+                                                                  │
+                                                       Reads from │ (or writes in case of in-memory mode)
+                                                                  ▼
+                                                        [ FastAPI Viewer ]
+                                                                  │
+                                                        Serves data to Dashboard
+                                                                  ▼
+                                                          [ Dashboard UI ]
 ```
 
 ---
