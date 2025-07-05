@@ -1,7 +1,7 @@
 import json
 import sys
 from pathlib import Path
-from zoneinfo import ZoneInfo, available_timezones
+import os
 
 
 def ask_yes_no(question: str, default: bool = True) -> bool:
@@ -64,20 +64,40 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
             # --- APPLICATION LOGGING ---
             support_app_logs = ask_yes_no("Do you want to support application log tailing?", True)
             source_log_tails = []
+
             while support_app_logs:
+                print("You can add multiple log files. Each will be a separate source in the config.")
+                print("please provide the full file path relative to the config file location.")
                 log_path = ask_string("Enter the log file path relative to the config file")
                 log_label = ask_string("Enter a label for this source")
                 event_type = generate_event_type_from_path(log_path)
-                timezone = ask_string("Enter timezone (e.g. Europe/Amsterdam)", ZoneInfo("localtime").key if "localtime" in available_timezones() else "UTC")
+            
+                def get_system_timezone():
+                    try:
+                        localtime_path = os.path.realpath("/etc/localtime")
+                        if "zoneinfo" in localtime_path:
+                            return localtime_path.split("zoneinfo/")[-1]
+                    except Exception:
+                        pass
+                    return "Europe/Amsterdam"  # Fallback
 
-                source_log_tails.append({
-                    "path": log_path,
-                    "label": log_label,
-                    "poll_interval": 1.0,
-                    "event_type": event_type,
-                    "log_level": "INFO",
-                    "tz_info": timezone
-                })
+                timezone = ask_string("Enter timezone (e.g. Europe/Amsterdam, UTC, etc.)", get_system_timezone())
+
+                CONFIG_PATH = Path(config_path)
+
+                # Run wizard if config is missing
+                if CONFIG_PATH.exists():
+                    source_log_tails.append({
+                        "path": log_path,
+                        "label": log_label,
+                        "poll_interval": 1.0,
+                        "event_type": event_type,
+                        "log_level": "INFO",
+                        "tz_info": timezone
+                    })
+                else:
+                    print(f"Config file {CONFIG_PATH} does not exist.")
+
                 support_app_logs = ask_yes_no("Do you want to add another log file?", False)
 
             config["source_log_tails"] = source_log_tails

@@ -72,25 +72,30 @@ def is_process_running(target_name):
             continue
     return None
 
-def start_process(command, silent=True):   
+def start_process(command, silent=True):
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
-    if platform.system() == "Windows":
-        proc = subprocess.Popen(
-            command,
-            creationflags=0x00000200,
-            stdout=stdout_dest,
-            stderr=stderr_dest
-        )
-    else:
-        proc = subprocess.Popen(
-            command,
-            start_new_session=True,
-            stdout=stdout_dest,
-            stderr=stderr_dest
-        )
-    return proc.pid if proc else None
+    try:
+        # Start subprocess with platform-specific behavior
+        if platform.system() == "Windows":
+            proc = subprocess.Popen(
+                command,
+                creationflags=0x00000200,  # CREATE_NEW_PROCESS_GROUP
+                stdout=stdout_dest,
+                stderr=stderr_dest
+            )
+        else:
+            proc = subprocess.Popen(
+                command,
+                start_new_session=True,  # Start in new process group on Unix
+                stdout=stdout_dest,
+                stderr=stderr_dest
+            )
+        return proc.pid  # Process started successfully, return its PID
+    except Exception as e:
+        logger.error(f"Failed to start process: {command} — {e}")
+        return None  # Any exception during startup is treated as failure
 
 
 def start_services(silent=True):
@@ -104,6 +109,7 @@ def start_services(silent=True):
         "poetry", "run", "uvicorn", "api.ingest.main:app",
         "--host", INGEST_BACKEND_HOST, "--port", str(INGEST_BACKEND_PORT), "--reload"
     ]
+
     # Command to start the log tailing process
     # More then one logfile can be tailed, configure in the realtimeresults_config.json
     logs_tail_cmd = [
@@ -113,12 +119,14 @@ def start_services(silent=True):
     def extract_identifier(command):
         return next((part for part in command if part.endswith(".py") or ":" in part), None)
 
-    # Define the processes to start
+    # add commands to list to run
     processes = {
-        extract_identifier(viewer_cmd): viewer_cmd,
-        extract_identifier(ingest_cmd): ingest_cmd,
-        extract_identifier(logs_tail_cmd): logs_tail_cmd
+    extract_identifier(viewer_cmd): viewer_cmd,
+    extract_identifier(ingest_cmd): ingest_cmd,
     }
+    # if there are no source log tails in config then do not add cmd for tail
+    if config.get("source_log_tails"): processes[extract_identifier(logs_tail_cmd)] = logs_tail_cmd
+
 
     pids = {}
     for name, command in processes.items():
@@ -148,11 +156,12 @@ def start_services(silent=True):
 
         # If the service is not running, start it
         pid = start_process(command)
+
         if pid:
             pids[name] = pid
             logger.info(f"Started {name} backend with PID {pid}")
         else:
-            logger.error(f"Failed to start {name} backend.")
+            logger.exception(f"Failed to start {name} backend.")
             sys.exit(1)
 
     if pids:
@@ -187,6 +196,8 @@ def main():
 
     logger.debug(f"Viewer: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}")
     logger.debug(f"Ingest: http://{INGEST_BACKEND_HOST}:{INGEST_BACKEND_PORT}")
+    logger.info(f"Dashboard: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}/dashboard")
+
 
     command = [
         "robot",
