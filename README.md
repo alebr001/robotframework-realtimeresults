@@ -1,29 +1,107 @@
 # RealtimeResults
 
-**RealtimeResults** is a modular system for collecting, processing, and visualizing test results, logs, and metrics in real time. It started as a Robot Framework listener but now also supports application log ingestion and basic metric tracking. It works both locally and in CI/CD pipelines.
+**RealtimeResults** is a modular, extensible system for collecting, processing, and visualizing test results, application logs, and metrics in real time. It is designed for use with [Robot Framework](https://robotframework.org/) but also supports ingestion application logs and custom metrics. The system is suitable for both local development and CI/CD pipelines.
+
+---
 
 ## Features
 
-- Realtime dashboard for Robot Framework test runs
-- Automatic startup of backend services (if needed)
-- Combine test events, log lines, and metrics in one system
-- Pluggable sinks (SQLite now, Loki planned)
-- Supports multiple log sources (files, etc.)
-- Metric ingestion (basic support, dashboard integration planned)
+- **Realtime Dashboard**: Live web dashboard for monitoring Robot Framework test runs, application logs, and metrics.
+- **Automatic Service Management**: CLI automatically starts backend APIs and log tailers as needed.
+- **Multi-source Log Ingestion**: Tail and ingest logs from multiple sources/files, each with its own label and timezone.
+- **Metric Tracking**: Ingest and store custom metrics alongside logs and test events. (todo)
+- **Flexible Storage**: Supports SQLite (file or in-memory); Loki integration (planned).
+- **Pluggable Sinks**: Easily extend with new sinks (e.g., HTTP, Loki, custom).
+- **Configurable via Wizard**: Interactive setup wizard for easy configuration.
+- **REST API**: FastAPI-based endpoints for event ingestion and dashboard queries.
+- **Extensible**: Modular codebase for adding new readers, sinks, or event types.
+
+---
+
+## Architecture Overview
+
+```
+[ Robot Framework Run ]
+        │
+        ▼
+[ Listener (RealTimeResults) ]
+        │
+        ├──► Writes to (SQLite or HTTP FastAPI) ──►  Event Store 
+        │                                             ▲
+        │                                             │
+        └─────────────► [ Log Tailer(s) ] ────────────┘
+                                                          │
+                                               Reads from │ (or writes in case of in-memory mode)
+                                                          ▼
+                                                 [ FastAPI Backend ]
+                                                          │
+                                                Serves data to Dashboard
+                                                          ▼
+                                                   [ Dashboard UI ]
+```
+
+---
+
+## Components
+
+### 1. Robot Framework Listener
+
+- Captures test events (suite/test start/end, log messages) in real time.
+- Sends events to a configured sink (SQLite, HTTP API, or Loki).
+- Supports unique test IDs, timestamps, tags, and more.
+- See [`producers/listener/listener.py`](producers/listener/listener.py).
+
+### 2. Log Tailer
+
+- Tails one or more application log files and sends parsed log lines to the ingest API.
+- Supports per-source configuration (label, event type, timezone, poll interval).
+- Parses timestamps, log levels, and message content using robust regex patterns.
+- See [`producers/log_producer/log_tails.py`](producers/log_producer/log_tails.py).
+
+### 3. Metric Ingestion (todo)
+
+- Supports ingestion of custom metrics (name, value, unit, source).
+- Metrics are stored in the same event store and can be visualized or queried.
+- See [`shared/sinks/sqlite_async.py`](shared/sinks/sqlite_async.py).
+
+### 4. Backend APIs
+
+- **Viewer API**: Serves dashboard, test events, and application logs.
+  - Endpoints: `/events`, `/applog`, `/events/clear`, `/dashboard`
+  - See [`api/viewer/main.py`](api/viewer/main.py)
+- **Ingest API**: Receives logs and metrics via POST.
+  - Endpoints: `/log` (async), `/event` (sync)
+  - See [`api/ingest/main.py`](api/ingest/main.py)
+
+### 5. Dashboard
+
+- Live web dashboard (HTML + JS) for real-time visualization.
+- Displays test status, failures, elapsed time, and live application logs.
+- Accessible at `/dashboard` on the viewer backend.
+- See [`dashboard/index.html`](dashboard/index.html).
+
+### 6. Sinks
+
+- **SQLite Sink**: Persistent storage for test events and logs.
+- **Async SQLite Sink**: Async variant for log/metric ingestion.
+- **Memory Sink**: In-memory storage for ephemeral runs.
+- **HTTP Sink**: For sending events to remote APIs.
+- **Loki Sink**: (Planned) Integration with Grafana Loki for log aggregation.
+- All sinks inherit from [`shared/sinks/base.py`](shared/sinks/base.py).
+
+---
 
 ## Installation
 
-### Option 1: Install from PyPI
+### From PyPI
 
-```bash
+```sh
 pip install robotframework-realtimeresults
 ```
 
-> Requires Python 3.9 or later. Tested on Python 3.9–3.12.
+### From Source
 
-### Option 2: Clone the repository for local development
-
-```bash
+```sh
 git clone https://github.com/alebr001/robotframework-realtimeresults
 cd robotframework-realtimeresults
 pip install poetry
@@ -31,74 +109,48 @@ poetry install
 poetry run rt-robot tests/
 ```
 
-## CLI usage
+---
 
-After installing the package, you can use the `rt-robot` command to run your test suite:
+## CLI Usage
 
-```bash
+Run your Robot Framework tests with real-time results:
+
+```sh
 rt-robot tests/
 ```
 
-The `rt-robot` command is a wrapper around the `robot` command.
+- The CLI will auto-start backend services and log tailers but it is preferable to start manually.
+- If no config file is found, an interactive setup wizard will guide you.
 
-It automatically starts required services like the backend APIs and log tailers if they are not already running.
+### Prefered usage 
 
-If no config file exists, a setup wizard is launched interactively.
-
-### Preferred usage
-
-While `rt-robot` can automatically start all required services, the preferred approach is to start the services manually in separate terminals for better visibility and control:
-
-```bash
-# Terminal 1
+- Terminal 1:
 uvicorn api.viewer.main:app --host 127.0.0.1 --port 8000 --reload
-
-# Terminal 2
+- Terminal 2:
 uvicorn api.ingest.main:app --host 127.0.0.1 --port 8001 --reload
-
-# Terminal 3 (optional, if using applog ingestion)
+- Terminal 3:
 python producers/log_producer/log_tails.py
-```
 
-### Custom config path
 
-To run with a custom configuration file instead of the default `realtimeresults_config.json` you can use json or toml:
+### Custom Config Path
 
-```bash
+```sh
 rt-robot --config path/to/custom_config.json tests/
 ```
 
-### Stop all services started by the CLI
+### Stopping Services
 
-When `rt-robot` starts backend services automatically, it records their PIDs in a file called `backend.pid`.
+When services are started via CLI, and rt-robot is used, backend PIDs are stored in `backend.pid`. Stop them with:
 
-You can stop them by running:
-
-```bash
+```sh
 python kill_backend.py
 ```
 
-## Project structure
-
-```
-.
-├── api/
-│   ├── ingest/         # Log + metric ingestion API
-│   └── viewer/         # Dashboard and query API
-├── dashboard/          # Static frontend dashboard
-├── producers/
-│   ├── listener/       # Robot Framework listener
-│   └── log_producer/   # Tail logfiles and send to backend
-├── shared/
-│   └── helpers/        # Config loader, setup wizard, logging
-│   └── sinks/          # http (sync/async), sqlite (sync/async/memory), loki (to be implemented)
-├── cli.py              # CLI entrypoint
-└── pyproject.toml
-```
+---
 
 ## Configuration
 
-When no config file is found, the CLI generates one using an interactive wizard. Example:
+If no config file is found, the CLI launches a wizard. Example config:
 
 ```json
 {
@@ -123,37 +175,87 @@ When no config file is found, the CLI generates one using an interactive wizard.
 }
 ```
 
-## Sink strategy overview
+- **source_log_tails**: List of log files to tail, each with its own label, event type, poll interval, and timezone.
+- **listener_sink_type**: Choose between `sqlite`, `backend_http_inmemory`, or `loki` (planned).
+- **ingest_sink_type**: For the ingest API, typically `asyncsqlite`.
 
-| `backend_strategy` | `listener_sink_type`      | Behavior                                                                 |
-|--------------------|---------------------------|--------------------------------------------------------------------------|
-| `sqlite`           | `sqlite`                  | Listener writes to local SQLite file; backend reads only                 |
-| `sqlite`           | `backend_http_inmemory`   | Listener sends events via HTTP; backend keeps data in memory only       |
-| `sqlite`           | `loki` *(planned)*        | Listener sends logs to Loki; backend is bypassed                         |
+---
 
-Note: When using `backend_http_inmemory`, the data is not persisted.
+## REST API Endpoints
+
+### Viewer API
+
+- `GET /events` — List all test events.
+- `GET /applog` — List all application logs.
+- `GET /events/clear` — Clear all test events.
+- `GET /dashboard` — Dashboard UI.
+
+### Ingest API
+
+- `POST /log` — Ingest application log or metric (JSON payload).
+- `POST /event` — Ingest test event (sync, for legacy use).
+
+---
 
 ## Dashboard
 
-Open the live dashboard in your browser:
+Open [http://127.0.0.1:8000/dashboard](http://127.0.0.1:8000/dashboard) to view:
 
-```
-http://127.0.0.1:8000/dashboard
-```
-
-The dashboard shows:
-
-- Test status (PASS/FAIL/SKIP)
-- Error messages
+- Live test status (PASS/FAIL/SKIP)
+- Failure details
 - Suite execution time
-- Application logs and metrics (if configured)
+- Live application logs
 
-## Planned features
+---
 
-- Improved dashboard filtering and tags
-- Loki integration with Grafana
-- Optional authentication for the API
+## Extending Functionality
+
+- **Add new sinks**: Inherit from `EventSink` or `AsyncEventSink` in [`shared/sinks/base.py`](shared/sinks/base.py).
+- **Add new event types**: Update SQL schema and ingestion logic.
+- **Custom log parsing**: Extend [`shared/helpers/log_line_parser.py`](shared/helpers/log_line_parser.py) and [`shared/helpers/log_line_datetime_patterns.py`](shared/helpers/log_line_datetime_patterns.py).
+
+---
+
+## Project Structure
+
+```
+.
+├── api/
+│   ├── ingest/         # Log + metric ingestion API
+│   └── viewer/         # Dashboard and query API
+├── dashboard/          # Static frontend dashboard
+├── producers/
+│   ├── listener/       # Robot Framework listener
+│   └── log_producer/   # Tail logfiles and send to backend
+├── shared/
+│   └── helpers/        # Config loader, setup wizard, logging, parsing
+│   └── sinks/          # http (sync/async), sqlite (sync/async/memory), loki (planned)
+├── cli.py              # CLI entrypoint
+└── pyproject.toml
+```
+
+## Requirements
+
+- Python 3.9 or later (tested on 3.9 – 3.13)
+- Works on macOS, Linux, Windows
+
+---
+
+## Planned Features
+
+- Grafana Loki integration for log aggregation. 
+- Advanced dashboard filtering and tag support.
+- Metric visualization.
+- Optional authentication for APIs.
+
+---
 
 ## License
 
 MIT — use and modify freely.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open issues or pull requests on
