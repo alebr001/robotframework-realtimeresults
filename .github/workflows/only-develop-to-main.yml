@@ -1,0 +1,25 @@
+name: Enforce Allowed Branches to Main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  enforce-allowed-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if source branch is allowed
+        run: |
+          echo "Source branch: ${{ github.head_ref }}"
+
+          if [[ "${{ github.head_ref }}" == "develop" ]] ||
+             [[ "${{ github.head_ref }}" == release/* ]] ||
+             [[ "${{ github.head_ref }}" == hotfix/* ]]; then
+            echo "Allowed branch: merge permitted"
+            exit 0
+          else
+            echo "Only 'develop', 'release/*' or 'hotfix/*' branches may merge to main"
+            exit 1
+          fi
