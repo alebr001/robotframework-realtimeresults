@@ -16,10 +16,14 @@ def load_config(path=None) -> dict:
         raise FileNotFoundError(f"Config file not found at {config_path}")
 
     ext = config_path.suffix.lower()
-    with config_path.open("rb") as f:
-        if ext == ".json":
-            return json.load(f)
-        elif ext == ".toml":
-            return tomllib.load(f)
-        else:
-            raise ValueError(f"Unsupported config file format: {ext}")
+    try:
+        with config_path.open("rb") as f:
+            if ext == ".json":
+                return json.load(f)
+            elif ext == ".toml":
+                return tomllib.load(f)
+            else:
+                raise ValueError(f"Unsupported config file format: {ext}")
+    except Exception as e:
+        print(f"Failed to load config from {config_path}")
+        exit(1)
