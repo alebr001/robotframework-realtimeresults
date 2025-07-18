@@ -32,7 +32,7 @@ def parse_args():
 
     return service_name, Path(config_path), robot_args
 
-def get_uvicorn_command(appname: str, config: dict) -> list[str]:
+def get_command(appname: str, config: dict) -> list[str]:
     if "ingest" in appname:
         host = config.get("ingest_backend_host", "127.0.0.1")
         port = config.get("ingest_backend_port", 8001)
@@ -45,13 +45,16 @@ def get_uvicorn_command(appname: str, config: dict) -> list[str]:
     else:
         raise ValueError(f"Unknown appname '{appname}'")
 
-    return [
-        sys.executable, "-m", "uvicorn",
-        appname,
-        "--host", host,
-        "--port", str(port),
-        "--reload"
-    ]
+    if ".py" in appname:
+        return [ sys.executable, appname ]
+    else: 
+        return [
+            sys.executable, "-m", "uvicorn",
+            appname,
+            "--host", host,
+            "--port", str(port),
+            "--reload"
+        ]
 
 def is_port_used(command):
     try:
@@ -102,27 +105,16 @@ def start_process(command, env, silent=True):
 
 def start_services(config, env, silent=True):
     logger.debug("Backend not running, starting it now...")
-    viewer_cmd = get_uvicorn_command("api.viewer.main:app", config)
-    ingest_cmd = get_uvicorn_command("api.ingest.main:app", config)
-    logs_tail_cmd = [
-        sys.executable, "producers/log_producer/log_tails.py"
+    services_to_start = [
+        "api.viewer.main:app",
+        "api.ingest.main:app",
     ]
-
-    # Extract the identifier from the command to use as a key if it contains a file or port
-    def extract_identifier(command):
-        # Returns the part of the command that ends with '.py' (so the full scriptpath)
-        # or contains ':' (for uvicorn app references like 'api.viewer.main:app')
-        return next((part for part in command if part.endswith(".py") or ":" in part), None)
-
-    processes = {
-        extract_identifier(viewer_cmd): viewer_cmd,
-        extract_identifier(ingest_cmd): ingest_cmd,
-    }
-    # Add logs tail command only if configured in config 
-    # (this is optional, so it might not be present in all configurations)
     if config.get("source_log_tails"):
-        processes[extract_identifier(logs_tail_cmd)] = logs_tail_cmd
-
+        services_to_start.append("producers/log_producer/log_tails.py")
+        
+    # Build the processes dict with service name as key
+    processes = {service: get_command(service, config) for service in services_to_start}
+    
     pids = {}
     for name, command in processes.items():
         # Check if the command contains --host and --port
@@ -141,8 +133,14 @@ def start_services(config, env, silent=True):
             logger.error(f"Failed to start {name}")
             sys.exit(1)
 
+    # filter commands that use ports, this is to avoid checking processes that do not use ports
+    port_commands = [
+        command for command in processes.values() if "--host" in command and "--port" in command
+    ]
+
     for _ in range(20):
-        if is_port_used(viewer_cmd) and is_port_used(ingest_cmd):
+        # Check only commands that use ports
+        if all(is_port_used(cmd) for cmd in port_commands):
             return pids
         time.sleep(0.25)
 
@@ -178,7 +176,7 @@ def main():
         logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
 
     if service_name:
-        command = get_uvicorn_command(service_name, config)
+        command = get_command(service_name, config)
         # also inject all env vars (incl config path) into the process
         subprocess.run(command, env=env)
         return
@@ -204,7 +202,7 @@ def main():
         logger.warning("Test run interrupted by user")
         sys.exit(130)
 
-    logger.info("Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
+    logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
     for name, pid in pids.items():
         logger.info(f"Service {name} started with PID {pid}")
     logger.info("Run 'python kill_backend.py' to stop background processes.")
