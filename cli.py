@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import subprocess
 import psutil
 import sys
@@ -12,40 +13,48 @@ from robot.running.builder import TestSuiteBuilder
 from shared.helpers.logger import setup_root_logging
 from shared.helpers.setup_wizard import run_setup_wizard
 
-# Split off our own --config argument, everything else is passed to robot
-if "--config" in sys.argv:
-    config_index = sys.argv.index("--config")
-    config_path = sys.argv[config_index + 1]
-    robot_args = sys.argv[1:config_index] + sys.argv[config_index + 2:] # 1:config_index = everything before --config, config_index + 2: = everything after the config path
-else:
+def parse_args():
+    """Simple manual parsing to support --runservice and --config."""
+    service_name = None
     config_path = "realtimeresults_config.json"
-    robot_args = sys.argv[1:]
+    robot_args = []
 
+    if "--runservice" in sys.argv:
+        runservice_index = sys.argv.index("--runservice")
+        service_name = sys.argv[runservice_index + 1]
 
-CONFIG_PATH = Path(config_path)
+    if "--config" in sys.argv:
+        config_index = sys.argv.index("--config")
+        config_path = sys.argv[config_index + 1]
+        robot_args = sys.argv[1:config_index] + sys.argv[config_index + 2:]
+    else:
+        robot_args = sys.argv[1:]
 
-# Run wizard if config is missing
-if not CONFIG_PATH.exists():
-    print(f"No config found at {CONFIG_PATH}. Launching setup wizard...")
-    run_tests = run_setup_wizard(CONFIG_PATH)
-    if not run_tests:
-        print(f"Please run the command again to run tests.")
-        sys.exit(0)
+    return service_name, Path(config_path), robot_args
 
-config = load_config(CONFIG_PATH)
+def get_command(appname: str, config: dict) -> list[str]:
+    if appname.endswith(".py"):
+        return [sys.executable, appname]
 
-VIEWER_BACKEND_HOST = config.get("viewer_backend_host", "127.0.0.1")
-VIEWER_BACKEND_PORT = int(config.get("viewer_backend_port", 8000))
+    if "ingest" in appname:
+        host = config.get("ingest_backend_host", "127.0.0.1")
+        port = config.get("ingest_backend_port", 8001)
+    elif "viewer" in appname:
+        host = config.get("viewer_backend_host", "127.0.0.1")
+        port = config.get("viewer_backend_port", 8000)
+    elif "combined" in appname:
+        host = config.get("combined_backend_host", "127.0.0.1")
+        port = config.get("combined_backend_port", 8080)
+    else:
+        raise ValueError(f"Unknown appname '{appname}'")
 
-INGEST_BACKEND_HOST = config.get("ingest_backend_host", "127.0.0.1")
-INGEST_BACKEND_PORT = int(config.get("ingest_backend_port", 8001))
-
-setup_root_logging(config.get("log_level", "info"))
-logger = logging.getLogger("rt-cli")
-component_level_logging = config.get("log_level_cli")
-
-if component_level_logging:
-    logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
+    return [
+        sys.executable, "-m", "uvicorn",
+        appname,
+        "--host", host,
+        "--port", str(port),
+        "--reload"
+    ]
 
 def is_port_used(command):
     try:
@@ -59,10 +68,6 @@ def is_port_used(command):
         return sock.connect_ex((host, port)) == 0
 
 def is_process_running(target_name):
-    """
-    Check if a process is running whose command (or script) contains the given name.
-    Returns the PID of the first found process, or None.
-    """
     for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
         try:
             cmdline = proc.info['cmdline'] or []
@@ -72,106 +77,70 @@ def is_process_running(target_name):
             continue
     return None
 
-def start_process(command, silent=True):
+def start_process(command, env, silent=True):
     stdout_dest = subprocess.DEVNULL if silent else None
     stderr_dest = subprocess.DEVNULL if silent else None
 
     try:
-        # Start subprocess with platform-specific behavior
         if platform.system() == "Windows":
             proc = subprocess.Popen(
                 command,
                 creationflags=0x00000200,  # CREATE_NEW_PROCESS_GROUP
                 stdout=stdout_dest,
-                stderr=stderr_dest
+                stderr=stderr_dest,
+                env=env
             )
         else:
             proc = subprocess.Popen(
                 command,
-                start_new_session=True,  # Start in new process group on Unix
+                start_new_session=True,
                 stdout=stdout_dest,
-                stderr=stderr_dest
+                stderr=stderr_dest,
+                env=env
             )
-        return proc.pid  # Process started successfully, return its PID
+        return proc.pid
     except Exception as e:
         logger.error(f"Failed to start process: {command} — {e}")
-        return None  # Any exception during startup is treated as failure
+        return None
 
-
-def start_services(silent=True):
-    logger.debug("backend not running, starting it now...")
-   
-    viewer_cmd = [
-        "poetry", "run", "uvicorn", "api.viewer.main:app", 
-        "--host", VIEWER_BACKEND_HOST, "--port", str(VIEWER_BACKEND_PORT), "--reload"
+def start_services(config, env, silent=True):
+    logger.debug("Backend not running, starting it now...")
+    services_to_start = [
+        "api.viewer.main:app",
+        "api.ingest.main:app",
     ]
-    ingest_cmd = [
-        "poetry", "run", "uvicorn", "api.ingest.main:app",
-        "--host", INGEST_BACKEND_HOST, "--port", str(INGEST_BACKEND_PORT), "--reload"
-    ]
-
-    # Command to start the log tailing process
-    # More then one logfile can be tailed, configure in the realtimeresults_config.json
-    logs_tail_cmd = [
-        "poetry", "run", "python", "producers/log_producer/log_tails.py"
-    ]
-
-    def extract_identifier(command):
-        return next((part for part in command if part.endswith(".py") or ":" in part), None)
-
-    # add commands to list to run
-    processes = {
-    extract_identifier(viewer_cmd): viewer_cmd,
-    extract_identifier(ingest_cmd): ingest_cmd,
-    }
-    # if there are no source log tails in config then do not add cmd for tail
-    if config.get("source_log_tails"): processes[extract_identifier(logs_tail_cmd)] = logs_tail_cmd
-
-
+    if config.get("source_log_tails"):
+        services_to_start.append("producers/log_producer/log_tails.py")
+        
+    # Build the processes dict with service name as key
+    processes = {service: get_command(service, config) for service in services_to_start}
+    
     pids = {}
     for name, command in processes.items():
-        # Check if the service is already running on host and port
+        # Check if the command contains --host and --port
+        # if the port is already in use, skip starting it
         if "--host" in command and "--port" in command:
             if is_port_used(command):
                 pid = is_process_running(name)
-                logger.info(f"{name} already running on {command[command.index('--host') + 1]}:{command[command.index('--port') + 1]} with PID {pid}")
-                pids[name] = pid
-                continue
-
-        # If the command does not contain host or port, we assume it's a simple script path
-        else:
-            script_path = Path(name) if name else None
-            # Check if the script exists
-            if script_path and not script_path.exists():
-                rel_path = script_path.relative_to(Path.cwd()) if script_path.is_absolute() else script_path
-                logger.error(f"{command} not executed: {rel_path}")
-                logger.error(f"Please check if the path is correct in your CLI config or code.")
-                sys.exit(1)
-
-            pid = is_process_running(name)
-            if pid:
                 logger.info(f"{name} already running with PID {pid}")
                 pids[name] = pid
                 continue
-
-        # If the service is not running, start it
-        pid = start_process(command)
-
+        pid = start_process(command, env=env)
         if pid:
             pids[name] = pid
-            logger.info(f"Started {name} backend with PID {pid}")
+            logger.info(f"Started {name} with PID {pid}")
         else:
-            logger.exception(f"Failed to start {name} backend.")
+            logger.error(f"Failed to start {name}")
             sys.exit(1)
 
-    if pids:
-        with open("backend.pid", "w") as f:
-            for name, pid in pids.items():
-                f.write(f"{name}={pid}\n")
+    # filter commands that use ports, this is to avoid checking processes that do not use ports
+    port_commands = [
+        command for command in processes.values() if "--host" in command and "--port" in command
+    ]
 
-     #wait for the services to listen
     for _ in range(20):
-        if is_port_used(viewer_cmd) and is_port_used(ingest_cmd):
+        # Check only commands that use ports
+        if all(is_port_used(cmd) for cmd in port_commands):
             return pids
         time.sleep(0.25)
 
@@ -186,35 +155,57 @@ def count_tests(path):
         logger.error(f"Cannot count tests: {e}")
         return 0
 
-def main():    
-    args = sys.argv[1:]
-    test_path = args[-1] if args else "tests/"
+def main():
+    service_name, config_path, robot_args = parse_args()
+
+    if not config_path.exists():
+        print(f"No config found at {config_path}. Launching setup wizard...")
+        if not run_setup_wizard(config_path):
+            print("Setup completed. Please re-run this command.")
+            sys.exit(0)
+
+    config = load_config(config_path)
+    # set up environment variable for config path
+    env = os.environ.copy()
+    env["REALTIME_RESULTS_CONFIG"] = str(config_path)
+
+    setup_root_logging(config.get("log_level", "info"))
+    global logger
+    logger = logging.getLogger("rt-cli")
+    if lvl := config.get("log_level_cli"):
+        logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
+
+    if service_name:
+        command = get_command(service_name, config)
+        # also inject all env vars (incl config path) into the process
+        subprocess.run(command, env=env)
+        return
+
+    test_path = robot_args[-1] if robot_args else "tests/"
     total = count_tests(test_path)
-    logger.info(f"Starting testrun... with total tests: {total}")
+    logger.info(f"Starting testrun... total tests: {total}")
 
-    pids = start_services()
+    # also inject all env vars (incl config path) into the subprocesses
+    pids = start_services(config, env=env)
 
-    logger.debug(f"Viewer: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}")
-    logger.debug(f"Ingest: http://{INGEST_BACKEND_HOST}:{INGEST_BACKEND_PORT}")
-    logger.info(f"Dashboard: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}/dashboard")
-
-
+    logger.debug(f"Viewer: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}")
+    logger.debug(f"Ingest: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
+    logger.info(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
     command = [
-        "robot",
-        "--listener", f"producers.listener.listener.RealTimeResults:totaltests={total}"
+        "robot", "--listener",
+        f"producers.listener.listener.RealTimeResults:totaltests={total}"
     ] + robot_args
 
     try:
         subprocess.run(command)
     except KeyboardInterrupt:
-        logger.warning("Test run interrupted by user (Ctrl+C)")
+        logger.warning("Test run interrupted by user")
         sys.exit(130)
 
-    logger.info(f"Testrun finished. Dashboard: http://{VIEWER_BACKEND_HOST}:{VIEWER_BACKEND_PORT}/dashboard")
-    if pids:
-        for name, pid in pids.items():
-            logger.info(f"Service {name} started with PID {pid}")
-        logger.info("Run 'python kill_backend.py' to terminate the background processes.")
-        
+    logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
+    for name, pid in pids.items():
+        logger.info(f"Service {name} started with PID {pid}")
+    logger.info("Run 'python kill_backend.py' to stop background processes.")
+
 if __name__ == "__main__":
     main()

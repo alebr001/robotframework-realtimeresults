@@ -23,21 +23,19 @@
 ```
 [ Robot Framework Run ]
         │
-        ▼
-[ Listener (RealTimeResults) ]
         │
-        ├──► Writes to (SQLite or HTTP FastAPI) ──►  Event Store 
-        │                                             ▲
-        │                                             │
-        └─────────────► [ Log Tailer(s) ] ────────────┘
-                                                          │
-                                               Reads from │ (or writes in case of in-memory mode)
-                                                          ▼
-                                                 [ FastAPI Backend ]
-                                                          │
-                                                Serves data to Dashboard
-                                                          ▼
-                                                   [ Dashboard UI ]
+        ├──► Listener writes to (SQLite / FastApi Ingest) ──►  Event Store 
+        │                                                      ▲  │
+        │                                                      │  │
+        └─────► [ Log Tailer(s) (FastApi Ingest) ] ────────────┘  │
+                                                                  │
+                                                       Reads from │ (or writes in case of in-memory mode)
+                                                                  ▼
+                                                        [ FastAPI Viewer ]
+                                                                  │
+                                                        Serves data to Dashboard
+                                                                  ▼
+                                                          [ Dashboard UI ]
 ```
 
 ---
@@ -124,11 +122,11 @@ rt-robot tests/
 
 ### Prefered usage 
 
-- Terminal 1:
-uvicorn api.viewer.main:app --host 127.0.0.1 --port 8000 --reload
-- Terminal 2:
-uvicorn api.ingest.main:app --host 127.0.0.1 --port 8001 --reload
-- Terminal 3:
+- **Terminal 1:**
+rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
+- **Terminal 2:**
+rt-robot --runservice api.ingest.main:app --config path/to/custom_config.json
+- **Terminal 3:**
 python producers/log_producer/log_tails.py
 
 
