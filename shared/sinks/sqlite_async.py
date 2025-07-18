@@ -20,6 +20,8 @@ class AsyncSqliteSink(AsyncEventSink):
             "app_log": self._handle_app_log,
             "www_log": self._handle_app_log,  # Alias for app_log
             "metric": self._handle_metric,
+            "rf_output_xml": self._handle_app_log,  # Robot Framework output XML logs
+            "rf_debug_log": self._handle_app_log,  # Robot Framework debug logs
         }
         self.logger.debug("Async sink writing to: %s", self.database_path.resolve())
 

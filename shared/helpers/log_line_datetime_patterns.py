@@ -10,6 +10,13 @@ DATETIME_PATTERNS = [
         "has_tz": True,
     },
 
+    # 2025-07-17 21:26:03.457478
+    {
+        "regex": re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+"),
+        "format": "%Y-%m-%d %H:%M:%S.%f",
+        "strip_brackets": False
+    },
+
     # 2025-07-02T13:45:03.567Z
     {
         "regex": re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z"),
