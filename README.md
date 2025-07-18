@@ -1,6 +1,6 @@
-# RealtimeResults
+# Robotframework-RealtimeResults
 
-**RealtimeResults** is a modular, extensible system for collecting, processing, and visualizing test results, application logs, and metrics in real time. It is designed for use with [Robot Framework](https://robotframework.org/) but also supports ingestion application logs and custom metrics. The system is suitable for both local development and CI/CD pipelines.
+**Robotframework-RealtimeResults** is a modular, extensible system for collecting, processing, and visualizing test results, application logs, and metrics in real time. It is designed for use with [Robot Framework](https://robotframework.org/) but also supports ingestion application logs and custom metrics. The system is suitable for both local development and CI/CD pipelines.
 
 ---
 
