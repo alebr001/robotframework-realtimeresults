@@ -33,6 +33,9 @@ def parse_args():
     return service_name, Path(config_path), robot_args
 
 def get_command(appname: str, config: dict) -> list[str]:
+    if appname.endswith(".py"):
+        return [sys.executable, appname]
+
     if "ingest" in appname:
         host = config.get("ingest_backend_host", "127.0.0.1")
         port = config.get("ingest_backend_port", 8001)
@@ -42,23 +45,16 @@ def get_command(appname: str, config: dict) -> list[str]:
     elif "combined" in appname:
         host = config.get("combined_backend_host", "127.0.0.1")
         port = config.get("combined_backend_port", 8080)
-    elif ".py" in appname:
-        # For Python scripts, we assume they are standalone and do not require host/port
-        host = ""
-        port = 0
     else:
         raise ValueError(f"Unknown appname '{appname}'")
 
-    if ".py" in appname:
-        return [ sys.executable, appname ]
-    else: 
-        return [
-            sys.executable, "-m", "uvicorn",
-            appname,
-            "--host", host,
-            "--port", str(port),
-            "--reload"
-        ]
+    return [
+        sys.executable, "-m", "uvicorn",
+        appname,
+        "--host", host,
+        "--port", str(port),
+        "--reload"
+    ]
 
 def is_port_used(command):
     try:
