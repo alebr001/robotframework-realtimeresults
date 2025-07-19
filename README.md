@@ -141,7 +141,7 @@ rt-robot --config path/to/custom_config.json tests/
 When services are started via CLI, and rt-robot is used, backend PIDs are stored in `backend.pid`. Stop them with:
 
 ```sh
-python kill_backend.py
+rt-robot --killbackend
 ```
 
 ---
