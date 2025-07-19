@@ -59,8 +59,11 @@ def _extract_log_level(line: str) -> Tuple[Optional[str], str]:
     if match:
         level = match.group(1).upper()
         cleaned_line = line[:match.start()] + line[match.end():]
-        cleaned_line = re.sub(r"^\[\s*[,\.]?\d*\]", "", cleaned_line).strip()  # also remove leftovers like [,234]
-        return level, cleaned_line
+        # Remove things like [,234] or other brackets
+        cleaned_line = re.sub(r"^\[\s*[,\.]?\d*\]", "", cleaned_line).strip()
+        # Remove leading dashes and spaces (e.g., "- ", "-- ", " - ")
+        cleaned_line = re.sub(r"^\s*[-–—]+\s*", "", cleaned_line)
+        return level, cleaned_line.strip()
     return None, line.strip()
 
 def extract_timestamp_and_clean_message(line: str, tz_info: str = "Europe/Amsterdam") -> Tuple[str, str, Tuple[str, ...]]:

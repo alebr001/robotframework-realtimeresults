@@ -132,7 +132,7 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
 
         print(f"\nConfiguration complete. Config written to: {config_path.resolve()}")
 
-        return ask_yes_no("Start tests?", True)
+        return ask_yes_no("Continue?", True)
     except KeyboardInterrupt:
         print("\n\nSetup cancelled by user (Ctrl+C). No config file was written.")
         sys.exit(130)

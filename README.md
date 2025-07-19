@@ -1,6 +1,6 @@
-# RealtimeResults
+# Robotframework-RealtimeResults
 
-**RealtimeResults** is a modular, extensible system for collecting, processing, and visualizing test results, application logs, and metrics in real time. It is designed for use with [Robot Framework](https://robotframework.org/) but also supports ingestion application logs and custom metrics. The system is suitable for both local development and CI/CD pipelines.
+**Robotframework-RealtimeResults** is a modular, extensible system for collecting, processing, and visualizing test results, application logs, and metrics in real time. It is designed for use with [Robot Framework](https://robotframework.org/) but also supports ingestion application logs and custom metrics. The system is suitable for both local development and CI/CD pipelines.
 
 ---
 
@@ -122,11 +122,11 @@ rt-robot tests/
 
 ### Prefered usage 
 
-- Terminal 1:
-uvicorn api.viewer.main:app --host 127.0.0.1 --port 8000 --reload
-- Terminal 2:
-uvicorn api.ingest.main:app --host 127.0.0.1 --port 8001 --reload
-- Terminal 3:
+- **Terminal 1:**
+rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
+- **Terminal 2:**
+rt-robot --runservice api.ingest.main:app --config path/to/custom_config.json
+- **Terminal 3:**
 python producers/log_producer/log_tails.py
 
 
@@ -141,7 +141,7 @@ rt-robot --config path/to/custom_config.json tests/
 When services are started via CLI, and rt-robot is used, backend PIDs are stored in `backend.pid`. Stop them with:
 
 ```sh
-python kill_backend.py
+rt-robot --killbackend
 ```
 
 ---

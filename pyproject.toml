@@ -1,15 +1,15 @@
 [tool.poetry]
 name = "robotframework-realtimeresults"
-version = "0.2.1"
+version = "0.3.2"
 description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
 authors = ["Jurgen Alebregtse j.alebregtse@gmail.com"]
 license = "MIT"
+readme = "README.md"
 packages = [
     { include = "api" },
     { include = "dashboard" },
     { include = "producers" },
-    { include = "shared" },
-    { include = "cli.py" }
+    { include = "shared" }
     ]
 
 [tool.poetry.dependencies]
@@ -31,4 +31,4 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-rt-robot = "cli:main"
+rt-robot = "shared.helpers.cli:main"
