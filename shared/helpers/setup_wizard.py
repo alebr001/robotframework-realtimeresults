@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 import os
 
-
 def ask_yes_no(question: str, default: bool = True) -> bool:
     suffix = "[Y/n]" if default else "[y/N]"
     while True:
