@@ -1,0 +1,36 @@
+name: Run unit tests on PR
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - 'release/**'
+    paths-ignore:
+      - 'README.md'
+      - '**.md'
+      - '.github/**'
+
+jobs:
+  run-tests:
+    if: |
+      github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/') ||
+      startsWith(github.base_ref, 'release/') && github.head_ref == 'develop'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: In stall dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install
+
+      - name: Run tests
+        run: poetry run pytest

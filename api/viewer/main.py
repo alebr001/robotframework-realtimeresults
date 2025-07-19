@@ -13,8 +13,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 
-
-
 config = load_config()
 ensure_schema(config.get("sqlite_path", "eventlog.db"))
 setup_root_logging(config.get("log_level", "info"))
@@ -53,6 +51,8 @@ def get_applog():
 def get_events():
     return event_reader.get_events()
     
+
+# todo should this move to ingest? Viewer does delete, separation of concerns    
 @app.get("/events/clear")
 def clear_events():
     logger.debug("Initiating clear_events() via GET /events/clear")
