@@ -12,6 +12,7 @@ from shared.helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
 from shared.helpers.logger import setup_root_logging
 from shared.helpers.setup_wizard import run_setup_wizard
+from shared.helpers.kill_backend import kill_backend
 
 def parse_args():
     """Simple manual parsing to support --runservice and --config."""
@@ -22,6 +23,27 @@ def parse_args():
     if "--runservice" in sys.argv:
         runservice_index = sys.argv.index("--runservice")
         service_name = sys.argv[runservice_index + 1]
+
+    if "--killbackend" in sys.argv:
+        print("Stopping local backend services for rt-robot.")
+        kill_backend()
+        sys.exit(0)
+
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print(
+            "Usage: python cli.py [options] [robot arguments]\n"
+            "Options:\n"
+            "  --help, -h           Show this help message and exit\n"
+            "  --runservice NAME    Start a single backend service (viewer, ingest, combined)\n"
+            "  --config PATH        Use a custom config file\n"
+            "  --killbackend        Stop all backend services\n"
+            "\n"
+            "All other arguments are passed to Robot Framework.\n"
+            "Examples:\n"
+            "  rt-robot --runservice api.viewer.main:app --config myconfig.json\n"
+            "  rt-robot --config myconfig.json --outputdir examples/results/ --debugfile debug.log tests/\n"
+        )
+        sys.exit(0)
 
     if "--config" in sys.argv:
         config_index = sys.argv.index("--config")
