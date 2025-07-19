@@ -9,8 +9,7 @@ packages = [
     { include = "api" },
     { include = "dashboard" },
     { include = "producers" },
-    { include = "shared" },
-    { include = "cli.py" }
+    { include = "shared" }
     ]
 
 [tool.poetry.dependencies]
@@ -32,4 +31,4 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-rt-robot = "cli:main"
+rt-robot = "shared.helpers.cli:main"
