@@ -5,6 +5,9 @@ on:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: write
+  
 jobs:
   build-and-publish:
     name: Build and publish to PyPI
