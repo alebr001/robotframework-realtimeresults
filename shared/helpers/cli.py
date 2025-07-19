@@ -24,7 +24,7 @@ def parse_args():
         runservice_index = sys.argv.index("--runservice")
         service_name = sys.argv[runservice_index + 1]
 
-    if "--killbackend" in sys.argv:
+    if "--killbackend" in sys.argv or "-kill_backend" in sys.argv:
         print("Stopping local backend services for rt-robot.")
         kill_backend()
         sys.exit(0)
@@ -90,6 +90,10 @@ def is_port_used(command):
         return sock.connect_ex((host, port)) == 0
 
 def is_process_running(target_name):
+    """
+    Check if a process is running whose command (or script) contains the given name.
+    Returns the PID of the first found process, or None.
+    """
     for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
         try:
             cmdline = proc.info['cmdline'] or []
@@ -147,6 +151,7 @@ def start_services(config, env, silent=True):
                 logger.info(f"{name} already running with PID {pid}")
                 pids[name] = pid
                 continue
+        # If the service is not running, start it
         pid = start_process(command, env=env)
         if pid:
             pids[name] = pid
@@ -155,13 +160,19 @@ def start_services(config, env, silent=True):
             logger.error(f"Failed to start {name}")
             sys.exit(1)
 
-    # filter commands that use ports, this is to avoid checking processes that do not use ports
+    if pids:
+        with open("backend.pid", "w") as f:
+            for name, pid in pids.items():
+                f.write(f"{name}={pid}\n")
+
+    # wait for the services to listen
+    # first filter commands that use ports, this is to avoid checking processes that do not use ports
     port_commands = [
         command for command in processes.values() if "--host" in command and "--port" in command
     ]
 
     for _ in range(20):
-        # Check only commands that use ports
+        # then check only commands that use ports
         if all(is_port_used(cmd) for cmd in port_commands):
             return pids
         time.sleep(0.25)
@@ -227,7 +238,7 @@ def main():
     logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
     for name, pid in pids.items():
         logger.info(f"Service {name} started with PID {pid}")
-    logger.info("Run 'python kill_backend.py' to stop background processes.")
+    logger.info("Run 'rt-robot --killbackend' to stop background processes.")
 
 if __name__ == "__main__":
     main()
