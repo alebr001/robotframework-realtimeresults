@@ -127,7 +127,9 @@ rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
 - **Terminal 2:**
 rt-robot --runservice api.ingest.main:app --config path/to/custom_config.json
 - **Terminal 3:**
-python producers/log_producer/log_tails.py
+rt-robot --runservice producers/log_producer/log_tails.py
+- **Terminal 4:**
+rt-robot --runservice python producers/metrics/metric_scraper.py
 
 
 ### Custom Config Path
@@ -174,6 +176,7 @@ If no config file is found, the CLI launches a wizard. Example config:
 ```
 
 - **source_log_tails**: List of log files to tail, each with its own label, event type, poll interval, and timezone.
+- **metric_scaper** logs cpu usage and memory to the database
 - **listener_sink_type**: Choose between `sqlite`, `backend_http_inmemory`, or `loki` (planned).
 - **ingest_sink_type**: For the ingest API, typically `asyncsqlite`.
 

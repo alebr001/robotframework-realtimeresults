@@ -5,15 +5,17 @@ import psutil
 import requests
 import socket
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from shared.helpers.config_loader import load_config
 
 config = load_config()
 
 # Configuration
-INGEST_URL = config.get("ingest_backend_host", "http://127.0.0.1:8001/log")
+INGEST_HOST = config.get("ingest_backend_host", "127.0.0.1")
+INGEST_PORT = config.get("ingest_backend_port", 8001)
+INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}/log"
 
-INTERVAL = 5  # seconds
+INTERVAL = 60  # seconds
 HOSTNAME = socket.gethostname()
 
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +25,7 @@ def collect_metrics():
     cpu_percent = psutil.cpu_percent(interval=None)
     memory = psutil.virtual_memory()
     mem_percent = memory.percent
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(timezone.utc).isoformat()
 
     return [
         {
@@ -58,6 +60,7 @@ def main():
     while True:
         metrics = collect_metrics()
         send_metrics(metrics)
+        logger.info(f"Sent metrics: {metrics}")
         time.sleep(INTERVAL)
 
 if __name__ == "__main__":
