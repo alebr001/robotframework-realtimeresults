@@ -1,0 +1,50 @@
+name: Set version from branch name (on create only)
+
+on:
+  create:
+    branches:
+      - 'release/*'
+      - 'hotfix/*'
+
+jobs:
+  set-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout newly created branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Extract version from branch name
+        id: extract
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"
+          VERSION=$(echo "$BRANCH_NAME" | sed -E 's|^(release|hotfix)/v?||')
+          echo "version=$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare with current pyproject.toml version
+        run: |
+          NEW=${{ steps.extract.outputs.version }}
+          CURRENT=$(grep '^version = "' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          echo "pyproject.toml version: $CURRENT"
+          echo "Branch name version:     $NEW"
+
+          python3 -c "import sys; from packaging.version import Version; \
+          if Version('$NEW') <= Version('$CURRENT'): \
+              sys.exit(f'New version ($NEW) is lower than or equal to existing pyproject.toml version ($CURRENT)')"
+
+      - name: Update pyproject.toml
+        run: |
+          VERSION=${{ steps.extract.outputs.version }}
+          sed -i -E "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+
+      - name: Commit and push updated pyproject.toml
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add pyproject.toml
+          git commit -m "Set version to $VERSION from branch name"
+          git push origin ${{ github.ref_name }}
