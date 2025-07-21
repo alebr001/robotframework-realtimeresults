@@ -84,13 +84,15 @@ CREATE_METRIC_TABLE = """
 CREATE TABLE IF NOT EXISTS metrics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT,
-    name TEXT,
+    metric_name TEXT,
     value REAL,
-    unit TEXT
+    unit TEXT,
+    source TEXT
 )
 """
 
 INSERT_METRIC = """
-INSERT INTO metrics (timestamp, name, value, unit)
-VALUES (?, ?, ?, ?)
+INSERT INTO metrics (timestamp, metric_name, value, unit, source)
+VALUES (?, ?, ?, ?, ?)
 """
+

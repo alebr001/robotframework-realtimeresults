@@ -31,7 +31,7 @@ app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="das
 
 listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
-strategy = config.get("backend_strategy", "db").lower()  # http_backend_listener, db, loki
+strategy = config.get("backend_strategy", "sqlite").lower()  # http_backend_listener, db, loki
 
 if strategy == "sqlite":
     if listener_sink_type == "backend_http_inmemory":

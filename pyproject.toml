@@ -21,10 +21,12 @@ httpx = "^0.28.1"
 aiosqlite = "^0.21.0"
 robotframework-requests = "^0.9.7"
 psutil = "^7.0.0"
+tzdata = "^2025.2"
 
 [tool.poetry.group.dev.dependencies]
 robotframework = "^7.2.2"
 pytest = "^8.0.0"
+pytest-asyncio = "^1.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -32,3 +34,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 rt-robot = "shared.helpers.cli:main"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+asyncio_mode = "auto"
