@@ -21,7 +21,7 @@ jobs:
         id: extract
         run: |
           BRANCH_NAME="${GITHUB_REF##*/}"
-          VERSION=$(echo "$BRANCH_NAME" | sed -E 's|^(release|hotfix)/v?||')
+          VERSION=$(echo "$BRANCH_NAME" | sed -E 's/^(release|hotfix)\/v?//')
           echo "version=$VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
