@@ -6,6 +6,9 @@ on:
       - 'release/*'
       - 'hotfix/*'
 
+permissions:
+  contents: write
+
 jobs:
   set-version:
     runs-on: ubuntu-latest
@@ -53,5 +56,9 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add pyproject.toml
-          git commit -m "Set version to $VERSION from branch name"
+          git commit -m "Set version to ${{ steps.extract.outputs.version }} from branch name"
+
+          # configure auth for push
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          
           git push origin ${{ github.ref_name }}
