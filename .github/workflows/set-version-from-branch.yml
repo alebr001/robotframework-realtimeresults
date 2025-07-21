@@ -32,9 +32,16 @@ jobs:
           echo "pyproject.toml version: $CURRENT"
           echo "Branch name version:     $NEW"
 
-          python3 -c "import sys; from packaging.version import Version; \
-          if Version('$NEW') <= Version('$CURRENT'): \
-              sys.exit(f'New version ($NEW) is lower than or equal to existing pyproject.toml version ($CURRENT)')"
+          python3 <<EOF
+          import sys
+          from packaging.version import Version
+
+          new = Version("$NEW")
+          current = Version("$CURRENT")
+
+          if new <= current:
+              sys.exit(f"New version ({new}) is lower than or equal to existing pyproject.toml version ({current})")
+          EOF
 
       - name: Update pyproject.toml
         run: |
