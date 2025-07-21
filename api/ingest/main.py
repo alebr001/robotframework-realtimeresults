@@ -35,7 +35,7 @@ app = FastAPI(lifespan=lifespan)
 
 ingest_sink_type = config.get("ingest_sink_type", "asyncsqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
-strategy = config.get("backend_strategy", "db").lower()  # http_backend_listener, db, loki
+strategy = config.get("backend_strategy", "sqlite").lower()  # http_backend_listener, db, loki
 listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
 
 if strategy == "sqlite":

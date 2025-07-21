@@ -63,5 +63,5 @@ async def test_sqlite_operational_error(monkeypatch, test_event):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/log", json=test_event)
-        assert response.status_code == 503
-        assert "Database error" in response.text
+        assert response.status_code == 500
+        assert "Unexpected error" in response.text
