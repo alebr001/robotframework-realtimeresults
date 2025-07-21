@@ -63,7 +63,7 @@ class AsyncSqliteSink(AsyncEventSink):
             async with aiosqlite.connect(self.database_path) as db:
                 await db.execute(INSERT_METRIC, (
                     data.get("timestamp"),
-                    data.get("name"),
+                    data.get("metric_name"),
                     data.get("value"),
                     data.get("unit"),
                     data.get("source")
