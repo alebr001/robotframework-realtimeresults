@@ -32,7 +32,6 @@ logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
 
 app = FastAPI(lifespan=lifespan)
-app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
 ingest_sink_type = config.get("ingest_sink_type", "asyncsqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
@@ -54,12 +53,13 @@ else:
 async def receive_async_event(request: Request):
     event = await request.json()
     logger.info(f"Received event: {event}")
-    assert "event_type" in event, "event_type is missing from event!"
+    if "event_type" not in event:
+        return JSONResponse(content={"error": "event_type is missing"}, status_code=400)
     try:
         await event_sink.async_handle_event(event)
     except Exception as e:
-        logger.exception("Failed to handle event")
-        return {"error": str(e)}
+        logger.error("Unexpected error while handling event", exc_info=True)
+        return JSONResponse(content={"error": "Unexpected error"}, status_code=500)
     return {"received": True}
 
 @app.get("/log")
