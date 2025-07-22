@@ -1,10 +1,10 @@
 ## realtimeresults/listener.py
-import requests
 import logging
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
 from shared.sinks.http import HttpSink
 from shared.sinks.loki import LokiSink
+from shared.sinks.postgres import PostgresSink
 from shared.sinks.sqlite import SqliteSink
 from datetime import datetime, timezone
 
@@ -51,22 +51,34 @@ class RealTimeResults:
         self.listener_sink_type = self.config.get("listener_sink_type", "none").lower()
         self.total_tests = int(cli_config.get("totaltests", 0))
         self.current_test_id = None
-        
+        endpoint = ""
         try:
-            if self.listener_sink_type == "backend_http_inmemory":
-                self.sink = HttpSink(endpoint=self.config.get("backend_endpoint", "http://localhost:8000"))
+            if self.listener_sink_type == "http":
+                host = self.config.get("ingest_backend_host", "127.0.0.1")
+                port = self.config.get("ingest_backend_port", "8001")
+                endpoint = f"http://{host}:{port}/log"
+                self.sink = HttpSink(endpoint=endpoint)
+
+            elif self.listener_sink_type == "sync":
+                database_url = self.config.get("database_url", "none")
+                if database_url.startswith("sqlite:///"):
+                    self.sink = SqliteSink(database_url=self.database_url)
+                elif database_url.startswith(("postgresql://", "postgres://")):
+                    self.sink = PostgresSink(database_url=self.database_url)
+                else:
+                    raise ValueError(f"Unsupported database_url for sync: {self.database_url}")
+
             elif self.listener_sink_type == "loki":
-                self.endpoint = self.config.get("loki_endpoint", "http://localhost:3100")
-                self.sink = LokiSink(endpoint=self.endpoint)
-            elif self.listener_sink_type == "sqlite":
-                self.sink = SqliteSink(database_path=self.config.get("database_path", "eventlog.db"))
+                endpoint = self.config.get("loki_endpoint", "http://localhost:3100")
+                self.sink = LokiSink(endpoint=endpoint)
+
             elif self.listener_sink_type == "none":
                 self.sink = None
             else:
                 raise ValueError(f"Unsupported sink_type: {self.listener_sink_type}")
 
         except Exception as e:
-            self.logger.warning(f"[WARN] Sink '{self.listener_sink_type}' initialisatie failed ({e}), no sink selected.")
+            self.logger.warning(f"[WARN] Sink initialisatie failed ({e}), no sink selected.")
             self.sink = None
 
     def _send_event(self, event_type, **kwargs):
@@ -75,13 +87,8 @@ class RealTimeResults:
             **kwargs
             }
          
-        # Push naar backend API
-        if self.listener_sink_type == "backend_http_inmemory":
-            try:
-                requests.post("http://localhost:8000/event", json=event, timeout=0.5)
-            except requests.RequestException as e:
-                self.logger.warning(f"[WARN] Backend push faalde: {e}")
-        elif self.sink is not None:
+        # Push to sink
+        if self.sink is not None:
             try:
                 self.sink.handle_event(event) 
             except Exception as e:
@@ -92,58 +99,59 @@ class RealTimeResults:
     def log_message(self, message):
         self._send_event(
             "log_message",
-            message=message.message,
             testid=self.current_test_id,
-            level=message.level,
             timestamp=to_iso_utc(message.timestamp),
+            level=message.level,
+            message=message.message,
             html=message.html,
         )
 
-    def start_test(self, name, attrs):
-        self.current_test_id = generate_test_id(attrs)
+    def start_test(self, data, result):
+        self.current_test_id = generate_test_id(data)
         self._send_event(
             "start_test",
             testid=self.current_test_id,
-            name=attrs.name,
-            longname=attrs.longname,
-            suite=attrs.longname.split('.')[0],
-            tags=attrs.tags,
-            timestamp=to_iso_utc(attrs.starttime)
+            timestamp=to_iso_utc(result.starttime),
+            name=data.name,
+            longname=data.longname,
+            suite=data.longname.split('.')[0],
+            tags=data.tags
         )
 
-    def end_test(self, name, attrs):
+    def end_test(self, data, result):
         self._send_event(
             "end_test",
             testid=self.current_test_id,
-            name=name.name,
-            suite = ".".join(attrs.longname.split(".")[:-1]),
-            status=str(attrs.status),
-            message=str(attrs.message),
-            elapsed = attrs.elapsedtime / 1000 if hasattr(attrs, "elapsedtime") else None,
-            timestamp=to_iso_utc(attrs.endtime),
-            tags=[str(tag) for tag in attrs.tags]
+            timestamp=to_iso_utc(data.endtime),
+            name=data.name,
+            longname=data.longname,
+            suite = ".".join(data.longname.split(".")[:-1]),
+            status=str(result.status),
+            message=str(result.message),
+            elapsed = result.elapsedtime / 1000 if hasattr(data, "elapsedtime") else None,
+            tags=[str(tag) for tag in data.tags]
         )
         self.current_test_id = None
 
-    def start_suite(self, name, attrs):
+    def start_suite(self, data, result):
         self._send_event(
             "start_suite",
-            name=attrs.name,
-            longname=attrs.longname,
-            timestamp=to_iso_utc(attrs.starttime),
+            timestamp=to_iso_utc(data.starttime),
+            name=data.name,
+            longname=data.longname,
             totaltests=self.total_tests
         )
 
-    def end_suite(self, name, attrs):
+    def end_suite(self, data, result):
         self._send_event(
             "end_suite",
-            name=attrs.name,
-            longname=attrs.longname,
-            timestamp=to_iso_utc(attrs.endtime),
-            elapsed=attrs.elapsedtime / 1000,
-            status=attrs.status,
-            message=attrs.message,
-            statistics=str(attrs.statistics)
+            timestamp=to_iso_utc(data.endtime),
+            name=data.name,
+            longname=data.longname,
+            status=result.status,
+            message=result.message,
+            elapsed=result.elapsedtime / 1000,
+            statistics=str(result.statistics)
         )
 
     def _parse_config(self, config_str):

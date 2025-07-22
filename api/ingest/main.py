@@ -1,11 +1,14 @@
 import sqlite3
 import logging
+import sys
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
 from shared.helpers.ensure_db_schema import async_ensure_schema
+
 from shared.sinks.sqlite_async import AsyncSqliteSink
 from shared.sinks.memory_sqlite import MemorySqliteSink
+from shared.sinks.postgres_async import AsyncPostgresSink
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -16,7 +19,11 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if isinstance(event_sink, AsyncSqliteSink):
-        await async_ensure_schema(db_path)
+        try:
+            await async_ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
+        except Exception as e:
+            print(f"[FATAL] Could not initialize database: {e}")
+            sys.exit(1)
     yield
 
 config = load_config()
@@ -33,21 +40,22 @@ logger.debug("----------------------------")
 
 app = FastAPI(lifespan=lifespan)
 
-ingest_sink_type = config.get("ingest_sink_type", "asyncsqlite").lower()
-db_path = config.get("sqlite_path", "eventlog.db")
-strategy = config.get("backend_strategy", "sqlite").lower()  # http_backend_listener, db, loki
-listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
+ingest_sink_type = config.get("ingest_sink_type", "async").lower()
+database_url = config.get("database_url", "sqlite:///eventlog.db")
 
-if strategy == "sqlite":
-    if listener_sink_type == "backend_http_inmemory":
+if database_url.startswith("sqlite:///"):
+    # set the sink type. If Listener uses inmemory db then use that as event_sink otherwise use ingest_sink_type
+    if "inmemory" in database_url:
         memory_sink = MemorySqliteSink()
         event_sink = memory_sink  # used for POST /event
-    elif ingest_sink_type == "asyncsqlite":
-        event_sink = AsyncSqliteSink(database_path=db_path)  # used for GET /events from db
+    elif ingest_sink_type == "async":
+        event_sink = AsyncSqliteSink(database_url=database_url)  # used for GET /events from db
     else:
-        raise ValueError(f"Unsupported listener_sink_type in config: {ingest_sink_type}")
+        raise ValueError(f"Unsupported sink_type in config: {ingest_sink_type}")
+elif database_url.startswith(("postgresql://", "postgres://")):
+    event_sink = AsyncPostgresSink(database_url=database_url)
 else:
-    raise ValueError(f"Unsupported strategy in config: {strategy}")
+    raise ValueError(f"Unsupported databasetype in database_url in config, prefix with sqlite:/// or postgres://")
 
 @app.post("/log")
 async def receive_async_event(request: Request):

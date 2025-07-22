@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import sys
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
@@ -7,6 +8,7 @@ from shared.helpers.ensure_db_schema import ensure_schema
 
 from shared.sinks.memory_sqlite import MemorySqliteSink
 from api.viewer.readers.sqlite_reader import SqliteReader
+from api.viewer.readers.postgres_reader import PostgresReader
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -14,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 
 config = load_config()
-ensure_schema(config.get("sqlite_path", "eventlog.db"))
+
 setup_root_logging(config.get("log_level", "info"))
 
 logger = logging.getLogger("rt.api.viewer")
@@ -22,6 +24,12 @@ component_level_logging = config.get("log_level_cli")
 if component_level_logging:
     logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
+try:
+    ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
+except Exception as e:
+    logger.fatal(f"Could not initialize database: {e}")
+    sys.exit(1)
+    
 logger.debug("----------------------------")
 logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
@@ -29,19 +37,17 @@ logger.debug("----------------------------")
 app = FastAPI()
 app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
 
-listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
-db_path = config.get("sqlite_path", "eventlog.db")
-strategy = config.get("backend_strategy", "sqlite").lower()  # http_backend_listener, db, loki
+database_url = config.get("database_url", "sqlite:///eventlog.db")
 
-if strategy == "sqlite":
-    if listener_sink_type == "backend_http_inmemory":
+if database_url.startswith("sqlite:///"):
+    if "inmemory" in database_url:
         event_reader = SqliteReader(conn=MemorySqliteSink().get_connection()) # used for GET /events from db
-    if listener_sink_type == "sqlite":
-        event_reader = SqliteReader(database_path=db_path) # used for GET /events from db
     else:
-        raise ValueError(f"Unsupported listener_sink_type in config: {listener_sink_type}")
+        event_reader = SqliteReader(database_url=database_url) # used for GET /events from db
+elif database_url.startswith(("postgresql://", "postgres://")):
+    event_reader = PostgresReader(database_url=database_url)
 else:
-    raise ValueError(f"Unsupported strategy in config: {strategy}")
+    raise ValueError(f"Unsupported databasetype in database_url in config, prefix with sqlite:/// or postgres://")
 
 @app.get("/applog")
 def get_applog():
@@ -51,7 +57,6 @@ def get_applog():
 def get_events():
     return event_reader.get_events()
     
-
 # todo should this move to ingest? Viewer does delete, separation of concerns    
 @app.get("/events/clear")
 def clear_events():
