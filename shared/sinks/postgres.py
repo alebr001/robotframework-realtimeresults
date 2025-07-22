@@ -1,23 +1,18 @@
-import sqlite3
+import psycopg2
 import json
-import shared.helpers.sql_definitions as sql_definitions
-
 from pathlib import Path
+
 from shared.helpers.ensure_db_schema import ensure_schema
 from .base import EventSink
+import shared.helpers.sql_definitions as sql_definitions
 
 
-class SqliteSink(EventSink):
-    def __init__(self, database_url="sqlite:///eventlog.db"):
+class PostgresSink(EventSink):
+    def __init__(self, database_url=None):
         super().__init__()
-
-        # Strip 'sqlite:///' prefix if present
-        if database_url.startswith("sqlite:///"):
-            database_url = database_url.replace("sqlite:///", "", 1)
-        else:
-            database_url = database_url
-
-        self.database_path = Path(database_url)
+        from shared.helpers.config_loader import load_config
+        config = load_config()
+        self.database_url = database_url or config.get("db_url")
         self.dispatch_map = {
             "start_test": self._insert_rf_event,
             "end_test": self._insert_rf_event,
@@ -30,11 +25,11 @@ class SqliteSink(EventSink):
         self._initialize_database()
 
     def _initialize_database(self):
-        self.logger.info("Ensuring tables in %s exist", self.database_path)
+        self.logger.info("Ensuring PostgreSQL schema exists at: %s", self.database_url)
         try:
-            ensure_schema(self.database_path)
+            ensure_schema(self.database_url)
         except Exception as e:
-            self.logger.warning("[SQLITE_SYNC] DB init failed: %s", e)
+            self.logger.warning("[POSTGRES_SYNC] DB init failed: %s", e)
             raise
 
     def _handle_event(self, data):
@@ -42,14 +37,14 @@ class SqliteSink(EventSink):
         handler = self.dispatch_map.get(event_type)
         if handler:
             try:
-                with sqlite3.connect(self.database_path) as conn:
+                with psycopg2.connect(self.database_url) as conn:
                     handler(conn, data)
                     conn.commit()
             except Exception as e:
-                self.logger.warning("[SQLITE_SYNC] Failed to process event_type '%s': %s", event_type, e)
+                self.logger.warning("[POSTGRES_SYNC] Failed to process event_type '%s': %s", event_type, e)
                 raise
         else:
-            self.logger.warning("[SQLITE_SYNC] No handler for event_type: %s", event_type)
+            self.logger.warning("[POSTGRES_SYNC] No handler for event_type: %s", event_type)
 
     def _insert_rf_event(self, conn, data):
         columns = sql_definitions.event_columns
@@ -57,7 +52,7 @@ class SqliteSink(EventSink):
         for name, _ in columns:
             # tags needs a different approach because it is a list and needs to be serialized to JSON
             if name == "tags":
-                tags = data.get("tags", [])
+                tags = data.get(name, [])
                 values.append(json.dumps(tags))  # serialize to JSON string
             else:
                 values.append(data.get(name))
