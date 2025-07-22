@@ -12,7 +12,6 @@ permissions:
 jobs:
   set-version:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout newly created branch
         uses: actions/checkout@v4
