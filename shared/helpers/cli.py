@@ -211,7 +211,10 @@ def main():
     if service_name:
         command = get_command(service_name, config)
         # also inject all env vars (incl config path) into the process
-        subprocess.run(command, env=env)
+        try:
+            subprocess.run(command, env=env)
+        except KeyboardInterrupt:
+            logger.info("\nKeyboard interrupt...")
         return
 
     test_path = robot_args[-1] if robot_args else "tests/"
