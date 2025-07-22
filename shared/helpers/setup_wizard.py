@@ -36,8 +36,7 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
         config = {}
 
         # --- BACKEND STRATEGY ---
-        config["backend_strategy"] = "sqlite"  # fixed default
-        config["sqlite_path"] = "eventlog.db"
+        config["database_url"] = "sqlite:///eventlog.db"
 
         # --- ENABLE VIEWER ---
         use_viewer = ask_yes_no("Do you want to enable the viewer backend? (Required to use Dashboard)", True)
@@ -82,20 +81,15 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
 
                 timezone = ask_string("Enter timezone (e.g. Europe/Amsterdam, UTC, etc.)", get_system_timezone())
 
-                CONFIG_PATH = Path(config_path)
-
                 # Run wizard if config is missing
-                if CONFIG_PATH.exists():
-                    source_log_tails.append({
-                        "path": log_path,
-                        "label": log_label,
-                        "poll_interval": 1.0,
-                        "event_type": event_type,
-                        "log_level": "INFO",
-                        "tz_info": timezone
-                    })
-                else:
-                    print(f"Config file {CONFIG_PATH} does not exist.")
+                source_log_tails.append({
+                    "path": log_path,
+                    "label": log_label,
+                    "poll_interval": 1.0,
+                    "event_type": event_type,
+                    "log_level": "INFO",
+                    "tz_info": timezone
+                })
 
                 support_app_logs = ask_yes_no("Do you want to add another log file?", False)
 
@@ -106,9 +100,9 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
             config["source_log_tails"] = []
 
         # --- STRATEGY / SINK TYPES ---
-        config["listener_sink_type"] = ask_string("Sink type for Robot Framework listener", "sqlite")
+        config["listener_sink_type"] = ask_string("Sink type for Robot Framework listener", "http")
         if use_ingest:
-            config["ingest_sink_type"] = ask_string("Sink type for the ingest API", "asyncsqlite")
+            config["ingest_sink_type"] = ask_string("Sink type for the ingest API", "async")
         else:
             config["ingest_sink_type"] = "NONE"
 

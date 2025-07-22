@@ -154,9 +154,8 @@ If no config file is found, the CLI launches a wizard. Example config:
 
 ```json
 {
-  "backend_strategy": "sqlite",
-  "listener_sink_type": "sqlite",
-  "sqlite_path": "eventlog.db",
+  "listener_sink_type": "sync",
+  "database_url": "sqlite:///eventlog.db, sqlite:///inmemory, postgresql://realtime:realtimepass@db:5432/realtime_db, etc",
   "viewer_backend_host": "127.0.0.1",
   "viewer_backend_port": 8000,
   "ingest_backend_host": "127.0.0.1",
@@ -177,8 +176,8 @@ If no config file is found, the CLI launches a wizard. Example config:
 
 - **source_log_tails**: List of log files to tail, each with its own label, event type, poll interval, and timezone.
 - **metric_scaper** logs cpu usage and memory to the database
-- **listener_sink_type**: Choose between `sqlite`, `backend_http_inmemory`, or `loki` (planned).
-- **ingest_sink_type**: For the ingest API, typically `asyncsqlite`.
+- **listener_sink_type**: Choose between `sync`, `http`, or `loki` (planned).
+- **ingest_sink_type**: For the ingest API, typically `async`.
 
 ---
 
