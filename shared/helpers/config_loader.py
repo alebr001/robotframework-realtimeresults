@@ -4,26 +4,48 @@ import os
 from pathlib import Path
 from typing import Union
 
-def load_config(path=None) -> dict:
+def load_config(path: Union[str, Path, None] = None, override_with_env: bool = True) -> dict:
     # First check the environment variable if path is not provided
     if path is None:
         # If REALTIME_RESULTS_CONFIG is set, use that; otherwise, default to 'realtimeresults_config.json'
         path = os.environ.get("REALTIME_RESULTS_CONFIG", "realtimeresults_config.json")
-    
+
     config_path = Path(path)
 
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found at {config_path}")
+    config: dict = {}
 
-    ext = config_path.suffix.lower()
-    try:
-        with config_path.open("rb") as f:
-            if ext == ".json":
-                return json.load(f)
-            elif ext == ".toml":
-                return tomllib.load(f)
-            else:
-                raise ValueError(f"Unsupported config file format: {ext}")
-    except Exception as e:
-        print(f"Failed to load config from {config_path}")
+    # read configfile
+    if config_path.exists():
+        ext = config_path.suffix.lower()
+        try:
+            with config_path.open("rb") as f:
+                if ext == ".json":
+                    config = json.load(f)
+                elif ext == ".toml":
+                    config = tomllib.load(f)
+                else:
+                    raise ValueError(f"Unsupported config file format: {ext}")
+        except Exception as e:
+            print(f"Failed to load config from {config_path}: {e}")
+            exit(1)
+    else:
+        print(f"Config file not found at {config_path}, continuing with empty config")
+
+    # Override with env vars
+    if override_with_env:
+        for key in list(config.keys()):
+            env_key = key.upper()
+            env_value = os.getenv(env_key)
+            if env_value is not None:
+                print(f"[CONFIG] Overriding '{key}' with environment variable '{env_key}'")
+                config[key] = env_value
+
+
+    REQUIRED_KEYS = ["database_url", "ingest_sink_type"]
+    
+    missing = [k for k in REQUIRED_KEYS if not config.get(k)]
+    if missing:
+        print(f"[CONFIG ERROR] Missing required config key(s): {', '.join(missing)}")
         exit(1)
+
+    return config
