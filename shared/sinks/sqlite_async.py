@@ -15,9 +15,9 @@ class AsyncSqliteSink(AsyncEventSink):
 
         # Strip 'sqlite:///' prefix if present
         if database_url.startswith("sqlite:///"):
-            database_url = database_url.replace("sqlite:///", "", 1)
+            self.database_url = database_url.replace("sqlite:///", "", 1)
         else:
-            database_url = database_url
+            self.database_url = database_url
 
 
         self.database_path = Path(database_url)
@@ -30,14 +30,15 @@ class AsyncSqliteSink(AsyncEventSink):
             "rf_debug": self._handle_app_log, # Robot Framework debug logs
         }
         self.logger.debug("Async sink writing to: %s", self.database_path.resolve())
-
-    async def _initialize_database(self):
+ 
+    # call from ingest main.py to initialize the database schema
+    async def initialize_database(self):
         try:
-            await async_ensure_schema(self.database_path)
+            await async_ensure_schema(self.database_url)
         except Exception as e:
             self.logger.warning("[SQLITE_ASYNC] Failed to initialize DB: %s", e)
             raise
-
+    
     def handle_event(self, data):
         raise NotImplementedError("This function is not implemented.")
 

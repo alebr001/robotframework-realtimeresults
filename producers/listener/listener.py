@@ -26,9 +26,9 @@ def to_iso_utc(timestr) -> str:
         return dt.astimezone(timezone.utc).isoformat()
     raise TypeError(f"Unsupported type for to_iso_utc: {type(timestr)}")
 
-def generate_test_id(attrs) -> str:
+def generate_test_id(data, result) -> str:
     """Generate a unique test ID based on longname and starttime."""
-    return f"{attrs.longname}::{to_iso_utc(attrs.starttime)}"
+    return f"{data.longname}::{to_iso_utc(result.starttime)}"
 
 class RealTimeResults:
     ROBOT_LISTENER_API_VERSION = 3
@@ -62,11 +62,11 @@ class RealTimeResults:
             elif self.listener_sink_type == "sync":
                 database_url = self.config.get("database_url", "none")
                 if database_url.startswith("sqlite:///"):
-                    self.sink = SqliteSink(database_url=self.database_url)
+                    self.sink = SqliteSink(database_url=database_url)
                 elif database_url.startswith(("postgresql://", "postgres://")):
-                    self.sink = PostgresSink(database_url=self.database_url)
+                    self.sink = PostgresSink(database_url=database_url)
                 else:
-                    raise ValueError(f"Unsupported database_url for sync: {self.database_url}")
+                    raise ValueError(f"Unsupported database_url for sync: {database_url}")
 
             elif self.listener_sink_type == "loki":
                 endpoint = self.config.get("loki_endpoint", "http://localhost:3100")
@@ -76,9 +76,8 @@ class RealTimeResults:
                 self.sink = None
             else:
                 raise ValueError(f"Unsupported sink_type: {self.listener_sink_type}")
-
         except Exception as e:
-            self.logger.warning(f"[WARN] Sink initialisatie failed ({e}), no sink selected.")
+            self.logger.warning(f"[Sink initialisatie failed ({e}), no sink selected.")
             self.sink = None
 
     def _send_event(self, event_type, **kwargs):
@@ -92,7 +91,7 @@ class RealTimeResults:
             try:
                 self.sink.handle_event(event) 
             except Exception as e:
-                self.logger.error(f"[ERROR] Event handling failed: {e}")
+                self.logger.error(f"Event handling failed: {e}")
         else:
             self.logger.debug(f"[DEBUG] No sink configured for sink_type='{self.listener_sink_type}' — event ignored.")
 
@@ -107,22 +106,24 @@ class RealTimeResults:
         )
 
     def start_test(self, data, result):
-        self.current_test_id = generate_test_id(data)
+        self.current_test_id = generate_test_id(data, result)
         self._send_event(
             "start_test",
             testid=self.current_test_id,
-            timestamp=to_iso_utc(result.starttime),
+            starttime=to_iso_utc(result.starttime),
+            endtime=to_iso_utc(result.endtime),
             name=data.name,
             longname=data.longname,
             suite=data.longname.split('.')[0],
-            tags=data.tags
+            tags=[str(tag) for tag in data.tags]
         )
 
     def end_test(self, data, result):
         self._send_event(
             "end_test",
             testid=self.current_test_id,
-            timestamp=to_iso_utc(data.endtime),
+            starttime=to_iso_utc(result.starttime),
+            endtime=to_iso_utc(result.endtime),
             name=data.name,
             longname=data.longname,
             suite = ".".join(data.longname.split(".")[:-1]),
@@ -136,7 +137,8 @@ class RealTimeResults:
     def start_suite(self, data, result):
         self._send_event(
             "start_suite",
-            timestamp=to_iso_utc(data.starttime),
+            starttime=to_iso_utc(result.starttime),
+            endtime=to_iso_utc(result.endtime),
             name=data.name,
             longname=data.longname,
             totaltests=self.total_tests
@@ -145,7 +147,8 @@ class RealTimeResults:
     def end_suite(self, data, result):
         self._send_event(
             "end_suite",
-            timestamp=to_iso_utc(data.endtime),
+            starttime=to_iso_utc(result.starttime),
+            endtime=to_iso_utc(result.endtime),
             name=data.name,
             longname=data.longname,
             status=result.status,

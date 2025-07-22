@@ -119,13 +119,16 @@ rt-robot tests/
 
 - The CLI will auto-start backend services and log tailers but it is preferable to start manually.
 - If no config file is found, an interactive setup wizard will guide you.
+- run ingest service first, because this will initialize the database for you. If you run the viewer without a database this will result in errors
 
 ### Prefered usage 
 
 - **Terminal 1:**
-rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
-- **Terminal 2:**
 rt-robot --runservice api.ingest.main:app --config path/to/custom_config.json
+
+- **Terminal 2:**
+rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
+
 - **Terminal 3:**
 rt-robot --runservice producers/log_producer/log_tails.py
 - **Terminal 4:**

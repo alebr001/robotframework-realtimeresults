@@ -4,7 +4,6 @@ import sys
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.helpers.ensure_db_schema import ensure_schema
 
 from shared.sinks.memory_sqlite import MemorySqliteSink
 from api.viewer.readers.sqlite_reader import SqliteReader
@@ -23,13 +22,7 @@ logger = logging.getLogger("rt.api.viewer")
 component_level_logging = config.get("log_level_cli")
 if component_level_logging:
     logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
-
-try:
-    ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
-except Exception as e:
-    logger.fatal(f"Could not initialize database: {e}")
-    sys.exit(1)
-    
+  
 logger.debug("----------------------------")
 logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
@@ -77,7 +70,7 @@ def get_elapsed_time():
     if not start_event:
         return {"elapsed": "00:00:00"}
 
-    start_ts = datetime.fromisoformat(start_event["timestamp"])
+    start_ts = datetime.fromisoformat(start_event["starttime"])
     now = datetime.now(timezone.utc)
     elapsed = now - start_ts
     return {"elapsed": str(elapsed).split('.')[0]} 

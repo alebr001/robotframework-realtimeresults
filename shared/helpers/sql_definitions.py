@@ -17,7 +17,8 @@ ID_FIELD = "id SERIAL PRIMARY KEY" if is_postgres() else "id INTEGER PRIMARY KEY
 event_columns = [
     ("event_type", "TEXT"),
     ("testid", "TEXT"),
-    ("timestamp", "TEXT"),
+    ("starttime", "TEXT"),
+    ("endtime", "TEXT"),
     ("name", "TEXT"),
     ("longname", "TEXT"),
     ("suite", "TEXT"),
@@ -27,18 +28,6 @@ event_columns = [
     ("statistics", "TEXT"),
     ("tags", "TEXT"),
 ]
-
-# === RF LOG MESSAGES ===
-rf_log_columns = [
-    ("event_type", "TEXT"),
-    ("testid", "TEXT"),
-    ("timestamp", "TEXT"),
-    ("level", "TEXT"),
-    ("message", "TEXT"),
-    ("html", "TEXT"),
-]
-
-
 
 CREATE_EVENTS_TABLE = f"""
 CREATE TABLE IF NOT EXISTS events (
@@ -55,7 +44,7 @@ VALUES ({', '.join([Q] * len(event_columns))})
 SELECT_ALL_EVENTS = f"""
 SELECT {', '.join(name for name, _ in event_columns)}
 FROM events
-ORDER BY timestamp ASC
+ORDER BY COALESCE(starttime, endtime) ASC
 """
 
 DELETE_ALL_EVENTS = "DELETE FROM events"

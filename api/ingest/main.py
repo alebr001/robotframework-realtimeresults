@@ -4,23 +4,22 @@ import sys
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.helpers.ensure_db_schema import async_ensure_schema
 
+from shared.sinks.base import AsyncEventSink
 from shared.sinks.sqlite_async import AsyncSqliteSink
 from shared.sinks.memory_sqlite import MemorySqliteSink
 from shared.sinks.postgres_async import AsyncPostgresSink
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if isinstance(event_sink, AsyncSqliteSink):
+    if isinstance(event_sink, AsyncEventSink):
         try:
-            await async_ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
+            await event_sink.initialize_database()
         except Exception as e:
             print(f"[FATAL] Could not initialize database: {e}")
             sys.exit(1)

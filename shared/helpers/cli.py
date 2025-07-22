@@ -132,8 +132,8 @@ def start_process(command, env, silent=True):
 def start_services(config, env, silent=True):
     logger.debug("Backend not running, starting it now...")
     services_to_start = [
-        "api.viewer.main:app",
         "api.ingest.main:app",
+        "api.viewer.main:app",
     ]
     if config.get("source_log_tails"):
         services_to_start.append("producers/log_producer/log_tails.py")

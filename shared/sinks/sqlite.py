@@ -13,11 +13,11 @@ class SqliteSink(EventSink):
 
         # Strip 'sqlite:///' prefix if present
         if database_url.startswith("sqlite:///"):
-            database_url = database_url.replace("sqlite:///", "", 1)
+            self.database_url = database_url.replace("sqlite:///", "", 1)
         else:
-            database_url = database_url
+            self.database_url = database_url
 
-        self.database_path = Path(database_url)
+        self.database_path = Path(self.database_url)
         self.dispatch_map = {
             "start_test": self._insert_rf_event,
             "end_test": self._insert_rf_event,
@@ -32,7 +32,7 @@ class SqliteSink(EventSink):
     def _initialize_database(self):
         self.logger.info("Ensuring tables in %s exist", self.database_path)
         try:
-            ensure_schema(self.database_path)
+            ensure_schema(self.database_url)
         except Exception as e:
             self.logger.warning("[SQLITE_SYNC] DB init failed: %s", e)
             raise

@@ -19,7 +19,8 @@ class AsyncPostgresSink(AsyncEventSink):
         }
         self.logger.debug("Async sink writing to PostgreSQL: %s", self.database_url)
 
-    async def _initialize_database(self):
+    # call from ingest main.py to initialize the database schema
+    async def initialize_database(self):
         try:
             await async_ensure_schema(self.database_url)
         except Exception as e:
@@ -33,7 +34,7 @@ class AsyncPostgresSink(AsyncEventSink):
         event_type = data.get("event_type")
         handler = self.dispatch_map.get(event_type)
         if handler:
-            await handler(data, sql_definitions.metric_columns)
+            await handler(data)
         else:
             self.logger.warning("[POSTGRES_ASYNC] No handler for event_type: %s", event_type)
 

@@ -17,7 +17,7 @@ def get_create_statements():
         if name.startswith("CREATE_") and isinstance(value, str)
     ]
 
-def ensure_schema(database_url: str):
+def ensure_schema(database_url):
     if database_url.startswith("postgresql://"):
         conn = psycopg2.connect(database_url)
         try:
@@ -34,7 +34,7 @@ def ensure_schema(database_url: str):
                 cursor.execute(statement)
             conn.commit()
 
-async def async_ensure_schema(database_url: str):
+async def async_ensure_schema(database_url):
     if database_url.startswith("postgresql://"):
         conn = await asyncpg.connect(database_url)
         try:
@@ -43,8 +43,7 @@ async def async_ensure_schema(database_url: str):
         finally:
             await conn.close()
     else:
-        path = database_url.replace("sqlite:///", "")
-        async with aiosqlite.connect(path) as db:
+        async with aiosqlite.connect(database_url) as db:
             for statement in get_create_statements():
                 await db.execute(statement)
             await db.commit()
