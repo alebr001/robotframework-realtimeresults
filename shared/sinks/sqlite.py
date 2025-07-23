@@ -29,7 +29,7 @@ class SqliteSink(EventSink):
         self._initialize_database()
 
     def _initialize_database(self):
-        self.logger.info("Ensuring tables in %s exist", self.database_path)
+        self.logger.info("Ensuring tables in %s exist", self.database_url)
         try:
             ensure_schema(self.database_url)
         except Exception as e:
