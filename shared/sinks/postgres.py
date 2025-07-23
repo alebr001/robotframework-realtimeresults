@@ -34,7 +34,7 @@ class PostgresSink(EventSink):
 
     def _handle_event(self, data):
         event_type = data.get("event_type")
-        handler = self.dispatch_map.get(event_type)
+        handler = self.dispatch_map.get(event_type) #lookup to see which method needs to be run for eventtype
         if handler:
             try:
                 with psycopg2.connect(self.database_url) as conn:

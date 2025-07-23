@@ -17,7 +17,6 @@ class SqliteSink(EventSink):
         else:
             self.database_url = database_url
 
-        self.database_path = Path(self.database_url)
         self.dispatch_map = {
             "start_test": self._insert_rf_event,
             "end_test": self._insert_rf_event,
@@ -42,7 +41,7 @@ class SqliteSink(EventSink):
         handler = self.dispatch_map.get(event_type)
         if handler:
             try:
-                with sqlite3.connect(self.database_path) as conn:
+                with sqlite3.connect(self.database_url) as conn:
                     handler(conn, data)
                     conn.commit()
             except Exception as e:

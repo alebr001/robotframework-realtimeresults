@@ -19,8 +19,6 @@ class AsyncSqliteSink(AsyncEventSink):
         else:
             self.database_url = database_url
 
-
-        self.database_path = Path(database_url)
         self.dispatch_map = {
             "app_log": self._handle_app_log,
             "www_log": self._handle_app_log,
@@ -29,7 +27,7 @@ class AsyncSqliteSink(AsyncEventSink):
             "rf_debug_log": self._handle_app_log, # Robot Framework debug logs
             "rf_debug": self._handle_app_log, # Robot Framework debug logs
         }
-        self.logger.debug("Async sink writing to: %s", self.database_path.resolve())
+        self.logger.debug("Async sink writing to: %s", self.database_url.resolve())
  
     # call from ingest main.py to initialize the database schema
     async def initialize_database(self):
@@ -53,7 +51,7 @@ class AsyncSqliteSink(AsyncEventSink):
     async def _handle_app_log(self, data):
         self.logger.debug("[SQLITE_ASYNC] Inserting app_log: %s", data)
         try:
-            async with aiosqlite.connect(self.database_path) as db:
+            async with aiosqlite.connect(self.database_url) as db:
                 values = [data.get(col) for col, _ in sql_definitions.app_log_columns]
                 await db.execute(sql_definitions.INSERT_APP_LOG, values)
                 await db.commit()
@@ -63,7 +61,7 @@ class AsyncSqliteSink(AsyncEventSink):
     async def _handle_metric(self, data):
         self.logger.debug("[SQLITE_ASYNC] Inserting metric: %s", data)
         try:
-            async with aiosqlite.connect(self.database_path) as db:
+            async with aiosqlite.connect(self.database_url) as db:
                 values = [data.get(col) for col, _ in sql_definitions.metric_columns]
                 await db.execute(sql_definitions.INSERT_METRIC, values)
                 await db.commit()
