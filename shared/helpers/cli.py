@@ -63,7 +63,7 @@ def get_command(appname: str, config: dict) -> list[str]:
         port = config.get("ingest_backend_port", 8001)
     elif "viewer" in appname:
         host = config.get("viewer_backend_host", "127.0.0.1")
-        port = config.get("viewer_backend_port", 8000)
+        port = config.get("viewer_backend_port", 8002)
     elif "combined" in appname:
         host = config.get("combined_backend_host", "127.0.0.1")
         port = config.get("combined_backend_port", 8080)
@@ -79,15 +79,18 @@ def get_command(appname: str, config: dict) -> list[str]:
     ]
 
 def is_port_used(command):
+    # example command: ['python', '-m', 'uvicorn', 'api.ingest.main:app', '--host', '127.0.0.1', '--port', '8002', '--reload']
     try:
-        host = command[command.index("--host") + 1]
-        port = int(command[command.index("--port") + 1])
+        host = command[command.index("--host") + 1]  # '127.0.0.1'
+        port = int(command[command.index("--port") + 1])  # '8002'
     except (ValueError, IndexError):
         raise ValueError("Command must contain --host and --port with values")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.settimeout(1)
-        return sock.connect_ex((host, port)) == 0
+        sock.settimeout(1)  # timeout = 1 second
+        # connect_ex returns 0 if port is open and reachable
+        return sock.connect_ex((host, port)) == 0  # True if port 8002 listens on 127.0.0.1, otherwise False
+
 
 def is_process_running(target_name):
     """
@@ -95,13 +98,18 @@ def is_process_running(target_name):
     Returns the PID of the first found process, or None.
     """
     for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
+        # proc.info['cmdline'] might be:
+        # ['api.ingest.main:app']
         try:
-            cmdline = proc.info['cmdline'] or []
+            cmdline = proc.info['cmdline'] or []  # Example: 'api.ingest.main:app'
             if any(target_name in part for part in cmdline):
-                return proc.info['pid']
+                # Example: target_name = "uvicorn" matches part = "api.ingest.main:app"
+                return proc.info['pid']  # Example: returns 12345
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            # Process may have exited, or permission is denied
             continue
-    return None
+    return None  # No matching process found
+
 
 def start_process(command, env, silent=True):
     stdout_dest = subprocess.DEVNULL if silent else None
@@ -131,6 +139,7 @@ def start_process(command, env, silent=True):
 
 def start_services(config, env, silent=True):
     logger.debug("Backend not running, starting it now...")
+    #create list of services to start
     services_to_start = [
         "api.ingest.main:app",
         "api.viewer.main:app",
@@ -138,19 +147,26 @@ def start_services(config, env, silent=True):
     if config.get("source_log_tails"):
         services_to_start.append("producers/log_producer/log_tails.py")
         
-    # Build the processes dict with service name as key
-    processes = {service: get_command(service, config) for service in services_to_start}
-    
+    # Loop over services and build the processes dict with service name as key 
+    # and command as value creating the command dynamically from the servicename and the configuration
+    processes = {service: get_command(service, config) for service in services_to_start} 
     pids = {}
+
+    #example process row: {"api.ingest.main:app": ['python', '-m', 'uvicorn', 'api.ingest.main:app', '--host', '127.0.0.1', '--port', '8002', '--reload']}
     for name, command in processes.items():
         # Check if the command contains --host and --port
         # if the port is already in use, skip starting it
-        if "--host" in command and "--port" in command:
-            if is_port_used(command):
-                pid = is_process_running(name)
-                logger.info(f"{name} already running with PID {pid}")
-                pids[name] = pid
-                continue
+
+
+        # if "--host" in command and "--port" in command:
+            # if is_port_used(command):
+        pid = is_process_running(name) # 'api.ingest.main:app'
+        
+        if pid:
+            logger.info(f"{name} already running with PID {pid}")
+            pids[name] = pid
+            continue
+
         # If the service is not running, start it
         pid = start_process(command, env=env)
         if pid:
@@ -165,14 +181,13 @@ def start_services(config, env, silent=True):
             for name, pid in pids.items():
                 f.write(f"{name}={pid}\n")
 
-    # wait for the services to listen
-    # first filter commands that use ports, this is to avoid checking processes that do not use ports
+    # filter commands that use ports, to see if they listen in next step
     port_commands = [
         command for command in processes.values() if "--host" in command and "--port" in command
     ]
-
+    
+    # wait for the services with host and port to listen
     for _ in range(20):
-        # then check only commands that use ports
         if all(is_port_used(cmd) for cmd in port_commands):
             return pids
         time.sleep(0.25)
@@ -214,19 +229,19 @@ def main():
         try:
             subprocess.run(command, env=env)
         except KeyboardInterrupt:
-            logger.info("\nKeyboard interrupt...")
+            logger.warning("Keyboard interrupt...")
         return
 
     test_path = robot_args[-1] if robot_args else "tests/"
     total = count_tests(test_path)
-    logger.info(f"Starting testrun... total tests: {total}")
+    logger.info(f"Starting testrun. Total tests: {total}")
 
     # also inject all env vars (incl config path) into the subprocesses
     pids = start_services(config, env=env)
 
-    logger.debug(f"Viewer: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}")
+    logger.debug(f"Viewer: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
     logger.debug(f"Ingest: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
-    logger.info(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
+    logger.info(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
     command = [
         "robot", "--listener",
         f"producers.listener.listener.RealTimeResults:totaltests={total}"
@@ -238,7 +253,7 @@ def main():
         logger.warning("Test run interrupted by user")
         sys.exit(130)
 
-    logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8000)}/dashboard")
+    logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
     for name, pid in pids.items():
         logger.info(f"Service {name} started with PID {pid}")
     logger.info("Run 'rt-robot --killbackend' to stop background processes.")

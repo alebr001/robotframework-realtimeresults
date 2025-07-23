@@ -27,7 +27,7 @@ class AsyncSqliteSink(AsyncEventSink):
             "rf_debug_log": self._handle_app_log, # Robot Framework debug logs
             "rf_debug": self._handle_app_log, # Robot Framework debug logs
         }
-        self.logger.debug("Async sink writing to: %s", self.database_url.resolve())
+        self.logger.debug(f"Async sink writing to: {self.database_url}")
  
     # call from ingest main.py to initialize the database schema
     async def initialize_database(self):

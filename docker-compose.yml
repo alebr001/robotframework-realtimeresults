@@ -26,7 +26,7 @@ services:
       - ./shared:/app/shared
       - ./realtimeresults_config.json:/config/realtimeresults_config.json
     ports:
-      - "8001:8000"
+      - "8002:8000"
     depends_on:
       - postgres
     networks:
@@ -41,7 +41,7 @@ services:
     volumes:
       - ./shared:/app/shared
     ports:
-      - "8002:8000"
+      - "8001:8000"
     depends_on:
       - postgres
     networks:

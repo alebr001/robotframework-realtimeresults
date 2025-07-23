@@ -3,6 +3,7 @@ import logging
 import sys
 
 from shared.helpers.config_loader import load_config
+from shared.helpers.ensure_db_schema import ensure_schema
 from shared.helpers.logger import setup_root_logging
 
 from shared.sinks.memory_sqlite import MemorySqliteSink
@@ -15,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 
 config = load_config()
-
+ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
 setup_root_logging(config.get("log_level", "info"))
 
 logger = logging.getLogger("rt.api.viewer")

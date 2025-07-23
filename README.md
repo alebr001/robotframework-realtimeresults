@@ -160,7 +160,7 @@ If no config file is found, the CLI launches a wizard. Example config:
   "listener_sink_type": "sync",
   "database_url": "sqlite:///eventlog.db, sqlite:///inmemory, postgresql://realtime:realtimepass@db:5432/realtime_db, etc",
   "viewer_backend_host": "127.0.0.1",
-  "viewer_backend_port": 8000,
+  "viewer_backend_port": 8002,
   "ingest_backend_host": "127.0.0.1",
   "ingest_backend_port": 8001,
   "source_log_tails": [
