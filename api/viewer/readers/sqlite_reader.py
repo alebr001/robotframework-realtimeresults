@@ -1,5 +1,4 @@
 # backend/sqlite_reader.py
-import json
 import sqlite3
 from .reader import Reader
 from shared.helpers.config_loader import load_config
