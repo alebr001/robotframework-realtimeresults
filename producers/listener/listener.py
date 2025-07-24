@@ -2,7 +2,7 @@
 import logging
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.sinks.http_sync import HttpSink
+from shared.sinks.http import HttpSink
 from shared.sinks.loki import LokiSink
 from shared.sinks.sqlite import SqliteSink
 from datetime import datetime, timezone

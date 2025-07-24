@@ -100,11 +100,11 @@ def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")):
             config["source_log_tails"] = []
 
         # --- STRATEGY / SINK TYPES ---
-        config["listener_sink_type"] = ask_string("Sink type for Robot Framework listener", "http")
         if use_ingest:
+            config["listener_sink_type"] = "http"
             config["ingest_sink_type"] = ask_string("Sink type for the ingest API", "async")
         else:
-            config["ingest_sink_type"] = "NONE"
+            config["listener_sink_type"] = "sqlite"
 
         # --- LOG LEVELS ---
         config["log_level"] = "INFO"
