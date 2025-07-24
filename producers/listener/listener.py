@@ -2,9 +2,8 @@
 import logging
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.sinks.http import HttpSink
+from shared.sinks.http_sync import HttpSink
 from shared.sinks.loki import LokiSink
-from shared.sinks.postgres import PostgresSink
 from shared.sinks.sqlite import SqliteSink
 from datetime import datetime, timezone
 
@@ -56,15 +55,13 @@ class RealTimeResults:
             if self.listener_sink_type == "http":
                 host = self.config.get("ingest_backend_host", "127.0.0.1")
                 port = self.config.get("ingest_backend_port", "8001")
-                endpoint = f"http://{host}:{port}/log"
+                endpoint = f"http://{host}:{port}"
                 self.sink = HttpSink(endpoint=endpoint)
 
-            elif self.listener_sink_type == "sync":
+            elif self.listener_sink_type == "sqlite":
                 database_url = self.config.get("database_url", "none")
                 if database_url.startswith("sqlite:///"):
                     self.sink = SqliteSink(database_url=database_url)
-                elif database_url.startswith(("postgresql://", "postgres://")):
-                    self.sink = PostgresSink(database_url=database_url)
                 else:
                     raise ValueError(f"Unsupported database_url for sync: {database_url}")
 

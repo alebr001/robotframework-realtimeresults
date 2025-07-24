@@ -1,12 +1,10 @@
 import sqlite3
 import logging
-import sys
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.ensure_db_schema import ensure_schema
 from shared.helpers.logger import setup_root_logging
 
-from shared.sinks.memory_sqlite import MemorySqliteSink
 from api.viewer.readers.sqlite_reader import SqliteReader
 from api.viewer.readers.postgres_reader import PostgresReader
 
@@ -34,10 +32,7 @@ app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="das
 database_url = config.get("database_url", "sqlite:///eventlog.db")
 
 if database_url.startswith("sqlite:///"):
-    if "inmemory" in database_url:
-        event_reader = SqliteReader(conn=MemorySqliteSink().get_connection()) # used for GET /events from db
-    else:
-        event_reader = SqliteReader(database_url=database_url) # used for GET /events from db
+    event_reader = SqliteReader(database_url=database_url) # used for GET /events from db
 elif database_url.startswith(("postgresql://", "postgres://")):
     event_reader = PostgresReader(database_url=database_url)
 else:

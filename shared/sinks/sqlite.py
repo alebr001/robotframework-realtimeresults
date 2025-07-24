@@ -2,11 +2,10 @@ import sqlite3
 import json
 import shared.helpers.sql_definitions as sql_definitions
 
-from pathlib import Path
 from shared.helpers.ensure_db_schema import ensure_schema
 from .base import EventSink
 
-
+# This class is used when no ingest api is needed. This will directly write listener information to database
 class SqliteSink(EventSink):
     def __init__(self, database_url="sqlite:///eventlog.db"):
         super().__init__()
@@ -36,6 +35,10 @@ class SqliteSink(EventSink):
             self.logger.warning("[SQLITE_SYNC] DB init failed: %s", e)
             raise
 
+    # In synchronous sinks, the database connection is managed centrally in the dispatcher.
+    # Handlers receive the 'conn' object as an argument and perform their operations directly on it.
+    # This pattern is acceptable because sync connections are blocking and expensive to open repeatedly.
+    # Using a shared connection per event keeps the logic efficient and transactionally consistent.
     def _handle_event(self, data):
         event_type = data.get("event_type")
         handler = self.dispatch_map.get(event_type)

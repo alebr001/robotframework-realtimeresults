@@ -6,9 +6,8 @@ from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
 
 from shared.sinks.base import AsyncEventSink
-from shared.sinks.sqlite_async import AsyncSqliteSink
-from shared.sinks.memory_sqlite import MemorySqliteSink
-from shared.sinks.postgres_async import AsyncPostgresSink
+from .sinks.sqlite_async import AsyncSqliteSink
+from .sinks.postgres_async import AsyncPostgresSink
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -43,45 +42,48 @@ ingest_sink_type = config.get("ingest_sink_type", "async").lower()
 database_url = config.get("database_url", "sqlite:///eventlog.db")
 
 if database_url.startswith("sqlite:///"):
-    # set the sink type. If Listener uses inmemory db then use that as event_sink otherwise use ingest_sink_type
-    if "inmemory" in database_url:
-        memory_sink = MemorySqliteSink()
-        event_sink = memory_sink  # used for POST /event
-    elif ingest_sink_type == "async":
-        event_sink = AsyncSqliteSink(database_url=database_url)  # used for GET /events from db
+    if ingest_sink_type == "async":
+        event_sink = AsyncSqliteSink(database_url=database_url)
     else:
         raise ValueError(f"Unsupported sink_type in config: {ingest_sink_type}")
 elif database_url.startswith(("postgresql://", "postgres://")):
     event_sink = AsyncPostgresSink(database_url=database_url)
 else:
-    raise ValueError(f"Unsupported databasetype in database_url in config, prefix with sqlite:/// or postgres://")
+    raise ValueError("Unsupported databasetype in database_url in config, prefix with sqlite:/// or postgres://")
+
+# Dispatch maps per endpoint
+log_event_types = ({"app_log", "www_log", "debug_log"}, event_sink.handle_app_log)
+metric_event_types = ({"metric"}, event_sink.handle_metric)
+rf_event_types = ({
+    "start_test", "end_test", "start_suite", "end_suite",
+    "start_keyword", "end_keyword", "test_step"
+}, event_sink.handle_rf_events) 
+rf_log_event_types = ({"log_message"}, event_sink.handle_rf_log)
+
+def get_handler_by_event_type(event_type: str):
+    if event_type in log_event_types[0]: return log_event_types[1]
+    elif event_type in metric_event_types[0]: return metric_event_types[1]
+    elif event_type in rf_event_types[0]: return rf_event_types[1]
+    elif event_type in rf_log_event_types[0]: return rf_log_event_types[1]
+    else:
+        return None
 
 @app.post("/log")
-async def receive_async_event(request: Request):
-    event = await request.json()
-    logger.info(f"Received event: {event}")
-    if "event_type" not in event:
-        return JSONResponse(content={"error": "event_type is missing"}, status_code=400)
-    try:
-        await event_sink.async_handle_event(event)
-    except Exception as e:
-        logger.error("Unexpected error while handling event", exc_info=True)
-        return JSONResponse(content={"error": "Unexpected error"}, status_code=500)
-    return {"received": True}
+async def receive_log_event(request: Request):
+    return await handle_event_request(request, log_event_types, "log", allow_fallback=True)
 
-@app.get("/log")
-async def log_get_info():
-    return {"status": "log endpoint expects POST with JSON payload"}
+@app.post("/metric")
+async def receive_metric_event(request: Request):
+    return await handle_event_request(request, metric_event_types, "metric")
 
-# not handled
 @app.post("/event")
-async def receive_event(request: Request):
-    event = await request.json()
-    try:
-        event_sink.handle_event(event)
-    except Exception as e:
-        return {"error": str(e)}
-    return {"received": True}
+async def receive_test_event(request: Request):
+    return await handle_event_request(request, rf_event_types, "event")
+
+@app.post("/event/log_message")
+async def receive_test_log_message(request: Request):
+    return await handle_event_request(request, rf_log_event_types, "event/log_message")
+
 
 @app.exception_handler(sqlite3.OperationalError)
 async def sqlite_error_handler(request: Request, exc: sqlite3.OperationalError):
@@ -90,3 +92,39 @@ async def sqlite_error_handler(request: Request, exc: sqlite3.OperationalError):
         status_code=503,
         content={"detail": f"Database error: {str(exc)}"}
     )
+
+async def handle_event_request(request: Request, dispatch_tuple, endpoint_name: str, allow_fallback: bool = False ):
+    # Check if json is valid
+    try:
+        event = await request.json()
+        logger.info(f"[{endpoint_name.upper()}] Received event: {event}")
+    except Exception:
+        return JSONResponse(content={"error": "Invalid JSON"}, status_code=400)
+
+    # Check if eventtype is present
+    event_type = event.get("event_type")
+    if not event_type:
+        return JSONResponse(
+            content={"error": f"Missing event_type for /{endpoint_name}"},
+            status_code=400,
+        )
+
+    allowed_types, fallback_handler = dispatch_tuple
+    try:
+        if event_type in allowed_types:
+            handler = get_handler_by_event_type(event_type)
+        elif allow_fallback:
+            logger.warning(f"[{endpoint_name.upper()}] Unknown event_type '{event_type}', falling back.")
+            handler = fallback_handler
+        else:
+            return JSONResponse(
+                content={"error": f"Invalid event_type '{event_type}' for /{endpoint_name}"},
+                status_code=400,
+            )
+        # here for instance log_event_types[1] is triggered
+        await handler(event)
+    except Exception:
+        logger.error(f"[{endpoint_name.upper()}] Error handling event {event_type}.", exc_info=True)
+        return JSONResponse(content={"error": "Internal server error"}, status_code=500)
+
+    return {"received": True}
