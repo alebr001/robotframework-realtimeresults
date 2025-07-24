@@ -154,12 +154,6 @@ def start_services(config, env, silent=True):
 
     #example process row: {"api.ingest.main:app": ['python', '-m', 'uvicorn', 'api.ingest.main:app', '--host', '127.0.0.1', '--port', '8002', '--reload']}
     for name, command in processes.items():
-        # Check if the command contains --host and --port
-        # if the port is already in use, skip starting it
-
-
-        # if "--host" in command and "--port" in command:
-            # if is_port_used(command):
         pid = is_process_running(name) # 'api.ingest.main:app'
         
         if pid:

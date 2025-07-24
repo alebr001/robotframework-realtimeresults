@@ -3,7 +3,7 @@ import sqlite3
 
 from httpx import AsyncClient, ASGITransport
 from api.ingest.main import app
-from shared.sinks.sqlite_async import AsyncSqliteSink
+from api.ingest.sinks.sqlite_async import AsyncSqliteSink
 
 from api.ingest.main import app, event_sink
 
