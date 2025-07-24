@@ -1,30 +1,39 @@
 # producers/metric_scraper/metric_scraper.py
+"""
+Collects basic host metrics and sends them to the ingest API
+via the shared AsyncHttpSink.
+"""
 
-import time
-import psutil
-import requests
+import asyncio
 import socket
-import logging
 from datetime import datetime, timezone
+
+import psutil
+import logging
+
+from shared.helpers.logger import setup_root_logging
 from shared.helpers.config_loader import load_config
-
-config = load_config()
-
-# Configuration
-INGEST_HOST = config.get("ingest_backend_host", "127.0.0.1")
-INGEST_PORT = config.get("ingest_backend_port", 8001)
-INGEST_URL = f"http://{INGEST_HOST}:{INGEST_PORT}/log"
+from shared.sinks.http import AsyncHttpSink
 
 INTERVAL = 60  # seconds
 HOSTNAME = socket.gethostname()
 
-logging.basicConfig(level=logging.INFO)
+config = load_config()
+setup_root_logging(config.get("log_level", "info"))
 logger = logging.getLogger("metric-scraper")
 
+
+# --------------------------------------------------------------------------- #
+# Metric collection helpers
+# --------------------------------------------------------------------------- #
 def collect_metrics():
+    """
+    Gather CPU and memory usage metrics.
+
+    Returns a list[dict] so we can easily iterate and dispatch events.
+    """
     cpu_percent = psutil.cpu_percent(interval=None)
-    memory = psutil.virtual_memory()
-    mem_percent = memory.percent
+    mem_percent = psutil.virtual_memory().percent
     timestamp = datetime.now(timezone.utc).isoformat()
 
     return [
@@ -46,22 +55,32 @@ def collect_metrics():
         },
     ]
 
-def send_metrics(metrics):
-    for metric in metrics:
-        try:
-            response = requests.post(INGEST_URL, json=metric)
-            if response.status_code != 200:
-                logger.warning(f"Failed to send metric: {response.status_code} {response.text}")
-        except Exception as e:
-            logger.error(f"Error sending metric: {e}")
 
-def main():
-    logger.info(f"Starting metric scraper. Sending to {INGEST_URL}")
+
+async def main():
+    ingest_host = config.get("ingest_backend_host", "127.0.0.1")
+    ingest_port = config.get("ingest_backend_port", 8001)
+    endpoint = f"http://{ingest_host}:{ingest_port}"
+
+    logger.info("Starting metric scraper. Ingest endpoint: %s", endpoint)
+
+    # Create one sink instance; reuse it for all events
+    sink = AsyncHttpSink(endpoint=endpoint, timeout=2.0)
+
     while True:
         metrics = collect_metrics()
-        send_metrics(metrics)
-        logger.info(f"Sent metrics: {metrics}")
-        time.sleep(INTERVAL)
+
+        # Dispatch each metric via the sink (await to keep back‑pressure)
+        for metric in metrics:
+            await sink._async_handle_event(metric)  # uses dispatch_map internally
+
+        logger.info("Sent metrics: %s", metrics)
+        await asyncio.sleep(INTERVAL)
+
 
 if __name__ == "__main__":
-    main()
+    # asyncio.run() ensures a clean event‑loop lifecycle
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Log tailer stopped by user.")

@@ -6,7 +6,7 @@ import logging
 
 
 class Reader(ABC):
-    def __init__(self, database_path=None):
+    def __init__(self, database_url=None):
         self.logger = logging.getLogger(self.__class__.__module__)
 
     def get_events(self):

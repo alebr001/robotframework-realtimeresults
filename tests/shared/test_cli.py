@@ -65,7 +65,7 @@ class TestCliWrapper(unittest.TestCase):
             mock_print.assert_any_call("No config found at realtimeresults_config.json. Launching setup wizard...")
             mock_exit.assert_called_once_with(0)
 
-    @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8000})
+    @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8002})
     @patch("shared.helpers.cli.Path.exists", return_value=True)
     @patch("shared.helpers.cli.start_services", return_value={"api.viewer.main:app": 999})
     @patch("shared.helpers.cli.count_tests", return_value=3)
@@ -80,7 +80,7 @@ class TestCliWrapper(unittest.TestCase):
                 "--outputdir", "results/", "tests/"
             ])
 
-    @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8000})
+    @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8002})
     @patch("shared.helpers.cli.Path.exists", return_value=True)
     @patch("shared.helpers.cli.subprocess.run")
     def test_main_runservice_direct(self, mock_run, mock_exists, mock_config):
