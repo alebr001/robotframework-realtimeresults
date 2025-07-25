@@ -1,0 +1,17 @@
+.menu {
+  background-color: #333;
+  color: white;
+  padding: 10px;
+}
+.menu ul {
+  list-style-type: none;
+  display: flex;
+  gap: 20px;
+}
+.menu a {
+  color: white;
+  text-decoration: none;
+}
+.menu a:hover {
+  text-decoration: underline;
+}

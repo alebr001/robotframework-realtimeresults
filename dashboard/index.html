@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>RealtimeResults Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        {% include "menu.css" %}
+    </style>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,7 +15,8 @@
             background-color: #f9f9f9;
         }
 
-        h1, h2 {
+        h1,
+        h2 {
             color: #333;
         }
 
@@ -36,7 +41,8 @@
             background-color: white;
         }
 
-        th, td {
+        th,
+        td {
             padding: 0.75rem;
             border: 1px solid #ddd;
             text-align: left;
@@ -76,10 +82,12 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Realtime Test Result Overview</h1>
+    {% include "menu.html" %}
     <div id="elapsed-container">
-    <strong>Totale tijd:</strong> <span id="elapsed-display">0s</span>
+        <strong>Totale tijd:</strong> <span id="elapsed-display">0s</span>
     </div>
 
     <div id="dashboard-container">
@@ -105,7 +113,6 @@
         </thead>
         <tbody></tbody>
     </table>
-
     <script>
         let chart;
 
@@ -138,7 +145,7 @@
             return await response.json();
         }
 
-         async function fetchAppLog() {
+        async function fetchAppLog() {
             const response = await fetch("/applog");
             return await response.json();
         }
@@ -285,5 +292,9 @@
         initLogContainer();
         setInterval(pollForUpdates, 1000);
     </script>
+    <script>
+        {% include "menu.js" %}
+    </script>
 </body>
+
 </html>

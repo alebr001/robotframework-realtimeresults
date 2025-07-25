@@ -9,9 +9,12 @@ from shared.sinks.memory_sqlite import MemorySqliteSink
 from api.viewer.readers.sqlite_reader import SqliteReader
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+
 from datetime import datetime, timezone
+from pathlib import Path
+
 
 config = load_config()
 ensure_schema(config.get("sqlite_path", "eventlog.db"))
@@ -27,7 +30,7 @@ logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
 
 app = FastAPI()
-app.mount("/dashboard", StaticFiles(directory="dashboard", html=True), name="dashboard")
+templates = Jinja2Templates(directory=Path(__file__).resolve().parents[2] / "dashboard")
 
 listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
@@ -42,6 +45,10 @@ if strategy == "sqlite":
         raise ValueError(f"Unsupported listener_sink_type in config: {listener_sink_type}")
 else:
     raise ValueError(f"Unsupported strategy in config: {strategy}")
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/applog")
 def get_applog():
