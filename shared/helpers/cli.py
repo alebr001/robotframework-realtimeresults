@@ -67,6 +67,9 @@ def get_command(appname: str, config: dict) -> list[str]:
     elif "combined" in appname:
         host = config.get("combined_backend_host", "127.0.0.1")
         port = config.get("combined_backend_port", 8080)
+    elif "dashboard" in appname:
+        host = config.get("dashboard_backend_host", "127.0.0.1")
+        port = config.get("dashboard_backend_port", 8002)
     else:
         raise ValueError(f"Unknown appname '{appname}'")
 

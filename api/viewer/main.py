@@ -8,12 +8,11 @@ from shared.helpers.ensure_db_schema import ensure_schema
 from shared.sinks.memory_sqlite import MemorySqliteSink
 from api.viewer.readers.sqlite_reader import SqliteReader
 
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from datetime import datetime, timezone
-from pathlib import Path
 
 
 config = load_config()
@@ -30,7 +29,15 @@ logger.debug("Starting FastAPI application")
 logger.debug("----------------------------")
 
 app = FastAPI()
-templates = Jinja2Templates(directory=Path(__file__).resolve().parents[2] / "dashboard")
+
+# TODO use config to only allow cross origin from dashboard API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 listener_sink_type = config.get("listener_sink_type", "sqlite").lower()
 db_path = config.get("sqlite_path", "eventlog.db")
@@ -46,10 +53,6 @@ if strategy == "sqlite":
 else:
     raise ValueError(f"Unsupported strategy in config: {strategy}")
 
-@app.get("/dashboard", response_class=HTMLResponse)
-async def get_dashboard(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
 @app.get("/applog")
 def get_applog():
     return event_reader.get_app_logs()
@@ -58,8 +61,7 @@ def get_applog():
 def get_events():
     return event_reader.get_events()
     
-
-# todo should this move to ingest? Viewer does delete, separation of concerns    
+# TODO should this move to ingest? Viewer does delete, separation of concerns    
 @app.get("/events/clear")
 def clear_events():
     logger.debug("Initiating clear_events() via GET /events/clear")
@@ -87,10 +89,6 @@ def get_elapsed_time():
 @app.get("/")
 def index():
     return {"message": "RealtimeResults API is running", "endpoints": ["/events", "/event (POST)"]}
-
-@app.get("/favicon.ico")
-def favicon():
-    return Response(status_code=204)
 
 @app.exception_handler(sqlite3.OperationalError)
 async def sqlite_error_handler(request: Request, exc: sqlite3.OperationalError):

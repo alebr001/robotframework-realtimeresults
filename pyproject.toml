@@ -7,7 +7,6 @@ license = "MIT"
 readme = "README.md"
 packages = [
     { include = "api" },
-    { include = "dashboard" },
     { include = "producers" },
     { include = "shared" }
     ]

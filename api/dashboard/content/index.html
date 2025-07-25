@@ -131,7 +131,7 @@
         }
 
         async function clearEvents() {
-            const response = await fetch("/events/clear");
+            const response = await fetch("http://127.0.0.1:8000/events/clear");
             if (response.ok) {
                 console.log("Events cleared");
                 await pollForUpdates();
@@ -141,12 +141,12 @@
         }
 
         async function fetchEvents() {
-            const response = await fetch("/events");
+            const response = await fetch("http://127.0.0.1:8000/events");
             return await response.json();
         }
 
         async function fetchAppLog() {
-            const response = await fetch("/applog");
+            const response = await fetch("http://127.0.0.1:8000/applog");
             return await response.json();
         }
 
