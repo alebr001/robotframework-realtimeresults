@@ -131,6 +131,7 @@
         }
 
         async function clearEvents() {
+            // TODO this should be dynamic based on the config
             const response = await fetch("http://127.0.0.1:8000/events/clear");
             if (response.ok) {
                 console.log("Events cleared");
@@ -141,11 +142,13 @@
         }
 
         async function fetchEvents() {
+            // TODO this should be dynamic based on the config
             const response = await fetch("http://127.0.0.1:8000/events");
             return await response.json();
         }
 
         async function fetchAppLog() {
+            // TODO this should be dynamic based on the config
             const response = await fetch("http://127.0.0.1:8000/applog");
             return await response.json();
         }
