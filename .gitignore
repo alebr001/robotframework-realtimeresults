@@ -181,6 +181,7 @@ report.html
 *.db
 backend.pid
 *config.json
+backlog.md
 
 #os
 .DS_Store
