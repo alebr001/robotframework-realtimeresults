@@ -7,7 +7,7 @@ from typing import Union
 def load_config(path: Union[str, Path, None] = None, override_with_env: bool = True) -> dict:
     # First check the environment variable if path is not provided
     if path is None:
-        # If REALTIME_RESULTS_CONFIG is set, use that; otherwise, default to 'realtimeresults_config.json'
+        # If REALTIME_RESULTS_CONFIG is set in cli wrapper, use that; otherwise, default to 'realtimeresults_config.json'
         path = os.environ.get("REALTIME_RESULTS_CONFIG", "realtimeresults_config.json")
 
     config_path = Path(path)
