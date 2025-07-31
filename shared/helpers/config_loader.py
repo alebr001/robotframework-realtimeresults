@@ -11,7 +11,6 @@ def load_config(path: Union[str, Path, None] = None, override_with_env: bool = T
         path = os.environ.get("REALTIME_RESULTS_CONFIG", "realtimeresults_config.json")
 
     config_path = Path(path)
-
     config: dict = {}
 
     # read configfile
@@ -24,10 +23,9 @@ def load_config(path: Union[str, Path, None] = None, override_with_env: bool = T
                 elif ext == ".toml":
                     config = tomllib.load(f)
                 else:
-                    raise ValueError(f"Unsupported config file format: {ext}")
+                    raise ConfigError(f"Unsupported config file format: {ext}")
         except Exception as e:
-            print(f"Failed to load config from {config_path}: {e}")
-            exit(1)
+            raise ConfigError(f"Failed to load config from {config_path}: {e}")
     else:
         print(f"Config file not found at {config_path}, continuing with empty config")
 
@@ -40,12 +38,14 @@ def load_config(path: Union[str, Path, None] = None, override_with_env: bool = T
                 print(f"[CONFIG] Overriding '{key}' with environment variable '{env_key}'")
                 config[key] = env_value
 
-
     REQUIRED_KEYS = ["database_url", "ingest_sink_type"]
-    
     missing = [k for k in REQUIRED_KEYS if not config.get(k)]
     if missing:
-        print(f"[CONFIG ERROR] Missing required config key(s): {', '.join(missing)}")
-        exit(1)
+        raise ConfigError(f"[CONFIG ERROR] Missing required config key(s): {', '.join(missing)}")
 
     return config
+
+
+class ConfigError(Exception):
+    """Raised when the config file is invalid or required keys are missing."""
+
