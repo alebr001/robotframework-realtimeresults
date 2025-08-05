@@ -1,8 +1,11 @@
+# sql_definitions.py
+# This module defines SQL statements and column definitions for multiple database types.
+# It supports both SQLite (using '?') and PostgreSQL (using '$1', '$2', etc.).
+
 import os
 from shared.helpers.config_loader import load_config
 
-# Detect backend type via env/config
-
+# Determine whether PostgreSQL is used based on config or environment variable
 def is_postgres():
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
@@ -10,10 +13,21 @@ def is_postgres():
         db_url = config.get("database_url", "")
     return db_url.startswith("postgresql")
 
-Q = "%s" if is_postgres() else "?"
+# Generate correct SQL placeholder syntax
+# PostgreSQL requires $1, $2, ... while SQLite uses ?
+def placeholder(index: int) -> str:
+    return f"${index}" if is_postgres() else "?"
+
+# Generate comma-separated placeholders for given number of columns
+# SQLite example: ?, ?, ?
+# PostgreSQL example: $1, $2, $3,
+def placeholders(n: int) -> str:
+    return ", ".join([placeholder(i + 1) for i in range(n)])
+
+# Define ID column depending on backend
 ID_FIELD = "id SERIAL PRIMARY KEY" if is_postgres() else "id INTEGER PRIMARY KEY AUTOINCREMENT"
 
-# === RF EVENTS ===
+# === Robot Framework Events Table ===
 event_columns = [
     ("event_type", "TEXT"),
     ("testid", "TEXT"),
@@ -38,7 +52,7 @@ CREATE TABLE IF NOT EXISTS events (
 
 INSERT_EVENT = f"""
 INSERT INTO events ({', '.join(name for name, _ in event_columns)})
-VALUES ({', '.join([Q] * len(event_columns))})
+VALUES ({placeholders(len(event_columns))})
 """
 
 SELECT_ALL_EVENTS = f"""
@@ -49,7 +63,7 @@ ORDER BY COALESCE(starttime, endtime) ASC
 
 DELETE_ALL_EVENTS = "DELETE FROM events"
 
-# === RF LOG MESSAGES ===
+# === RF Log Messages Table ===
 rf_log_columns = [
     ("event_type", "TEXT"),
     ("testid", "TEXT"),
@@ -68,7 +82,7 @@ CREATE TABLE IF NOT EXISTS rf_log_messages (
 
 INSERT_RF_LOG_MESSAGE = f"""
 INSERT INTO rf_log_messages ({', '.join(name for name, _ in rf_log_columns)})
-VALUES ({', '.join([Q] * len(rf_log_columns))})
+VALUES ({placeholders(len(rf_log_columns))})
 """
 
 SELECT_ALL_RF_LOGS = f"""
@@ -77,7 +91,7 @@ FROM rf_log_messages
 ORDER BY timestamp ASC
 """
 
-# === APP LOGS ===
+# === Application Logs Table ===
 app_log_columns = [
     ("timestamp", "TEXT"),
     ("event_type", "TEXT"),
@@ -95,7 +109,7 @@ CREATE TABLE IF NOT EXISTS app_logs (
 
 INSERT_APP_LOG = f"""
 INSERT INTO app_logs ({', '.join(name for name, _ in app_log_columns)})
-VALUES ({', '.join([Q] * len(app_log_columns))})
+VALUES ({placeholders(len(app_log_columns))})
 """
 
 SELECT_ALL_APP_LOGS = f"""
@@ -106,7 +120,7 @@ ORDER BY timestamp ASC
 
 DELETE_ALL_APP_LOGS = "DELETE FROM app_logs"
 
-# === METRICS ===
+# === Metrics Table ===
 metric_columns = [
     ("timestamp", "TEXT"),
     ("metric_name", "TEXT"),
@@ -124,7 +138,7 @@ CREATE TABLE IF NOT EXISTS metrics (
 
 INSERT_METRIC = f"""
 INSERT INTO metrics ({', '.join(name for name, _ in metric_columns)})
-VALUES ({', '.join([Q] * len(metric_columns))})
+VALUES ({placeholders(len(metric_columns))})
 """
 
 SELECT_ALL_METRICS = f"""
