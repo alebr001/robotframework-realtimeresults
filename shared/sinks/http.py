@@ -32,8 +32,10 @@ class HttpSink(EventSink):
             "end_suite": "/event",
             "start_keyword": "/event",
             "end_keyword": "/event",
-            "log_message": "/event",
             "test_step": "/event",
+            
+            # RF LOG MESSAGES
+            "log_message": "/event/log_message",
         }
 
     def _handle_event(self, data):
