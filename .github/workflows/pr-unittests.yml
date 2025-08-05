@@ -26,8 +26,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Setup config
-        run: echo "{}" > realtimeresults_config.json
+      - name: Create minimal config for tests
+        run: |
+          cat > realtimeresults_config.json <<EOF
+          {
+            "database_url": "sqlite:///eventlog.db",
+            "ingest_sink_type": "async"
+          }
+          EOF
+
 
       - name: In stall dependencies
         run: |
