@@ -221,7 +221,7 @@ def main():
         command = get_command(service_name, config)
         # also inject all env vars (incl config path) into the process
         try:
-            subprocess.run(command, env=env)
+            os.execvp(command[0], command)
         except KeyboardInterrupt:
             logger.warning("Keyboard interrupt...")
         return
@@ -230,12 +230,18 @@ def main():
     total = count_tests(test_path)
     logger.info(f"Starting testrun. Total tests: {total}")
 
-    # also inject all env vars (incl config path) into the subprocesses
-    pids = start_services(config, env=env)
+    if config.get("enable_auto_services", False):
+        logger.debug("Auto services are enabled.")
+        # also inject all env vars (incl config path) into the subprocesses
+        pids = start_services(config, env=env)
+    else:
+        logger.debug("Auto services are disabled. You need to start the backend services manually.")
+        pids = {}
 
     logger.debug(f"Viewer: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
     logger.debug(f"Ingest: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
-    logger.info(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
+    logger.debug(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
+    
     command = [
         "robot", "--listener",
         f"producers.listener.listener.RealTimeResults:totaltests={total}"
@@ -245,12 +251,14 @@ def main():
         subprocess.run(command)
     except KeyboardInterrupt:
         logger.warning("Test run interrupted by user")
-        sys.exit(130)
+        # sys.exit(130)
 
     logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
     for name, pid in pids.items():
         logger.info(f"Service {name} started with PID {pid}")
-    logger.info("Run 'rt-robot --killbackend' to stop background processes.")
+    
+    if config.get("enable_auto_services", True):
+        logger.info("Run 'rt-robot --killbackend' to stop background processes.")
 
 if __name__ == "__main__":
     main()
