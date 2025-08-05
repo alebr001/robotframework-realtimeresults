@@ -134,7 +134,8 @@ def start_process(command, env, silent=True):
             )
         return proc.pid
     except Exception as e:
-        logger.error(f"Failed to start process: {command} — {e}")
+        logger.error(f"Failed to start process: {command}")
+        logger.debug(f"Error details: {e}")
         return None
 
 def start_services(config, env, silent=True):
@@ -194,7 +195,8 @@ def count_tests(path):
         suite = TestSuiteBuilder().build(path)
         return suite.test_count
     except Exception as e:
-        logger.error(f"Cannot count tests: {e}")
+        logger.error(f"Cannot count tests")
+        logger.debug(f"Error details: {e}")
         return 0
 
 def main():
