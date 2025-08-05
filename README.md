@@ -131,6 +131,7 @@ rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
 
 - **Terminal 3:**
 rt-robot --runservice producers/log_producer/log_tails.py
+
 - **Terminal 4:**
 rt-robot --runservice python producers/metrics/metric_scraper.py
 

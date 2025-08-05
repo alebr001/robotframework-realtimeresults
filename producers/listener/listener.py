@@ -38,10 +38,9 @@ class RealTimeResults:
         if component_level_logging:
             self.logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
 
-        self.logger.info("----------------")
-        self.logger.info("Started listener")
-        self.logger.info("----------------")
-        self.logger.debug("------DEBUGTEST----------")
+        self.logger.debug("----------------")
+        self.logger.debug("Started listener")
+        self.logger.debug("----------------")
 
         file_config = load_config()  # {"sink_type": "sqlite", "debug": false}
         cli_config = self._parse_config(config_str)
@@ -72,7 +71,7 @@ class RealTimeResults:
             elif self.listener_sink_type == "none":
                 self.sink = None
             else:
-                raise ValueError(f"Unsupported sink_type: {self.listener_sink_type}")
+                raise ValueError(f"Unsupported sink_type: {self.listener_sink_type}, options are: http, sqlite, loki, none")
         except Exception as e:
             self.logger.warning(f"[Sink initialisatie failed ({e}), no sink selected.")
             self.sink = None

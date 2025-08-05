@@ -19,7 +19,11 @@ class PostgresReader(Reader):
         if self.conn is not None:
             return self.conn, False
         else:
-            return psycopg2.connect(self.database_url), True
+            try:
+                return psycopg2.connect(self.database_url), True
+            except psycopg2.OperationalError as e:
+                self.logger.error("Failed to connect to PostgreSQL is the service running? %s", e)
+                raise
 
     def _fetch_all_as_dicts(self, query: str) -> List[Dict]:
         self.logger.debug("Executing SQL -> %s", query)

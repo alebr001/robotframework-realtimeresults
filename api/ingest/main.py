@@ -6,8 +6,8 @@ from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
 
 from shared.sinks.base import AsyncEventSink
-from .sinks.sqlite_async import AsyncSqliteSink
-from .sinks.postgres_async import AsyncPostgresSink
+from api.ingest.sinks.sqlite_async import AsyncSqliteSink
+from api.ingest.sinks.postgres_async import AsyncPostgresSink
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse

@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import sys
 
 from shared.helpers.config_loader import load_config
 from shared.helpers.ensure_db_schema import ensure_schema
@@ -14,10 +15,16 @@ from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
 
 config = load_config()
-ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
 setup_root_logging(config.get("log_level", "info"))
-
 logger = logging.getLogger("rt.api.viewer")
+
+try:
+    ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
+except Exception as e:
+    logging.error("Failed to ensure database schema, application exited.")
+    logging.debug("Error details: %s", e)
+    sys.exit(1)
+
 component_level_logging = config.get("log_level_cli")
 if component_level_logging:
     logger.setLevel(getattr(logging, component_level_logging.upper(), logging.INFO))
@@ -34,7 +41,11 @@ database_url = config.get("database_url", "sqlite:///eventlog.db")
 if database_url.startswith("sqlite:///"):
     event_reader = SqliteReader(database_url=database_url) # used for GET /events from db
 elif database_url.startswith(("postgresql://", "postgres://")):
-    event_reader = PostgresReader(database_url=database_url)
+    try:
+        event_reader = PostgresReader(database_url=database_url)
+    except Exception as e:
+        logger.critical("Failed to initialize PostgresReader, application exited: %s", e)
+        sys.exit(1)
 else:
     raise ValueError(f"Unsupported databasetype in database_url in config, prefix with sqlite:/// or postgres://")
 
