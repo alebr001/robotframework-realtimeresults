@@ -22,7 +22,7 @@ def group_log_lines(lines: list[str], tz_info: str) -> list[tuple[str, str]]:
 
     for line in lines:
         stripped = line.strip()
-        if not stripped or stripped.startswith("~"):
+        if not stripped or stripped.startswith("~~~~~") or stripped.startswith("=====") or stripped.startswith("-----"):
             continue
 
         timestamp, _ = parse_known_datetime_formats(stripped, tz_info=tz_info)
@@ -118,6 +118,7 @@ async def main():
     ingest_endpoint = f"http://{ingest_host}:{ingest_port}"
     logger.info(f"Using ingest endpoint: {ingest_endpoint}")
 
+    # Create one sink instance; reuse it for all events
     sink = AsyncHttpSink(endpoint=ingest_endpoint)
 
     sources = config.get("source_log_tails", [])

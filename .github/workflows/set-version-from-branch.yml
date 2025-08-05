@@ -2,17 +2,14 @@ name: Set version from branch name (on create only)
 
 on:
   create:
-    branches:
-      - 'release/*'
-      - 'hotfix/*'
 
 permissions:
   contents: write
 
 jobs:
-  set-version:
+  bump-version:
+    if: github.ref_type == 'branch' && (startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/'))
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout newly created branch
         uses: actions/checkout@v4
