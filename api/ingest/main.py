@@ -84,7 +84,6 @@ async def receive_test_event(request: Request):
 async def receive_test_log_message(request: Request):
     return await handle_event_request(request, rf_log_event_types, "event/log_message")
 
-
 @app.exception_handler(sqlite3.OperationalError)
 async def sqlite_error_handler(request: Request, exc: sqlite3.OperationalError):
     logger.warning("Database unavailable during request to %s: %s", request.url.path, str(exc))
@@ -110,6 +109,7 @@ async def handle_event_request(request: Request, dispatch_tuple, endpoint_name: 
         )
 
     allowed_types, fallback_handler = dispatch_tuple
+
     try:
         if event_type in allowed_types:
             handler = get_handler_by_event_type(event_type)
@@ -122,7 +122,10 @@ async def handle_event_request(request: Request, dispatch_tuple, endpoint_name: 
                 status_code=400,
             )
         # here for instance log_event_types[1] is triggered
-        await handler(event)
+        if handler:
+            await handler(event)
+        else:
+            raise RuntimeError("Handler unexpectedly None")
     except Exception:
         logger.error(f"[{endpoint_name.upper()}] Error handling event {event_type}.", exc_info=True)
         return JSONResponse(content={"error": "Internal server error"}, status_code=500)
