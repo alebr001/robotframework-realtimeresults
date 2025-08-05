@@ -1,0 +1,61 @@
+name: Set version from branch name (on create only)
+
+on:
+  create:
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    if: github.ref_type == 'branch' && (startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout newly created branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Extract version from branch name
+        id: extract
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"
+          VERSION=$(echo "$BRANCH_NAME" | sed -E 's/^(release|hotfix)\/v?//')
+          echo "version=$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare with current pyproject.toml version
+        run: |
+          NEW=${{ steps.extract.outputs.version }}
+          CURRENT=$(grep '^version = "' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          echo "pyproject.toml version: $CURRENT"
+          echo "Branch name version:     $NEW"
+
+          python3 <<EOF
+          import sys
+          from packaging.version import Version
+
+          new = Version("$NEW")
+          current = Version("$CURRENT")
+
+          if new <= current:
+              sys.exit(f"New version ({new}) is lower than or equal to existing pyproject.toml version ({current})")
+          EOF
+
+      - name: Update pyproject.toml
+        run: |
+          VERSION=${{ steps.extract.outputs.version }}
+          sed -i -E "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+
+      - name: Commit and push updated pyproject.toml
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add pyproject.toml
+          git commit -m "Set version to ${{ steps.extract.outputs.version }} from branch name"
+
+          # configure auth for push
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          
+          git push origin ${{ github.ref_name }}

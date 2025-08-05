@@ -119,15 +119,19 @@ rt-robot tests/
 
 - The CLI will auto-start backend services and log tailers but it is preferable to start manually.
 - If no config file is found, an interactive setup wizard will guide you.
+- run ingest service first, because this will initialize the database for you. If you run the viewer without a database this will result in errors
 
 ### Prefered usage 
 
 - **Terminal 1:**
-rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
-- **Terminal 2:**
 rt-robot --runservice api.ingest.main:app --config path/to/custom_config.json
+
+- **Terminal 2:**
+rt-robot --runservice api.viewer.main:app --config path/to/custom_config.json
+
 - **Terminal 3:**
 rt-robot --runservice producers/log_producer/log_tails.py
+
 - **Terminal 4:**
 rt-robot --runservice python producers/metrics/metric_scraper.py
 
@@ -154,11 +158,10 @@ If no config file is found, the CLI launches a wizard. Example config:
 
 ```json
 {
-  "backend_strategy": "sqlite",
-  "listener_sink_type": "sqlite",
-  "sqlite_path": "eventlog.db",
+  "listener_sink_type": "sync",
+  "database_url": "sqlite:///eventlog.db, sqlite:///inmemory, postgresql://realtime:realtimepass@db:5432/realtime_db, etc",
   "viewer_backend_host": "127.0.0.1",
-  "viewer_backend_port": 8000,
+  "viewer_backend_port": 8002,
   "ingest_backend_host": "127.0.0.1",
   "ingest_backend_port": 8001,
   "source_log_tails": [
@@ -177,8 +180,8 @@ If no config file is found, the CLI launches a wizard. Example config:
 
 - **source_log_tails**: List of log files to tail, each with its own label, event type, poll interval, and timezone.
 - **metric_scaper** logs cpu usage and memory to the database
-- **listener_sink_type**: Choose between `sqlite`, `backend_http_inmemory`, or `loki` (planned).
-- **ingest_sink_type**: For the ingest API, typically `asyncsqlite`.
+- **listener_sink_type**: Choose between `sync`, `http`, or `loki` (planned).
+- **ingest_sink_type**: For the ingest API, typically `async`.
 
 ---
 
