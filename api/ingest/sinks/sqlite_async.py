@@ -38,7 +38,7 @@ class AsyncSqliteSink(BaseIngestSink):
         self.logger.debug("[SQLITE_ASYNC] Inserting app_log: %s", data)
         try:
             async with aiosqlite.connect(self.database_path) as db:
-                values = [data.get(col) for col, _ in sql_definitions.app_log_columns]
+                values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.app_log_columns]
                 await db.execute(sql_definitions.INSERT_APP_LOG, values)
                 await db.commit()
         except Exception as e:
@@ -49,7 +49,7 @@ class AsyncSqliteSink(BaseIngestSink):
         self.logger.debug("[SQLITE_ASYNC] Inserting metric: %s", data)
         try:
             async with aiosqlite.connect(self.database_path) as db:
-                values = [data.get(col) for col, _ in sql_definitions.metric_columns]
+                values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.metric_columns]
                 await db.execute(sql_definitions.INSERT_METRIC, values)
                 await db.commit()
         except Exception as e:
@@ -60,7 +60,9 @@ class AsyncSqliteSink(BaseIngestSink):
         self.logger.debug("[SQLITE_ASYNC] Inserting RF event: %s", data)
         try:
             async with aiosqlite.connect(self.database_path) as db:
-                values = [data.get(col) for col, _ in sql_definitions.event_columns]
+                # Convert all list, dict or bool values in `data` to JSON strings 
+                # This is necessary specifically for tags
+                values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.event_columns] # e.g. col = tags, _ = "TEXT"
                 await db.execute(sql_definitions.INSERT_EVENT, values)
                 await db.commit()
         except Exception as e:
@@ -71,7 +73,7 @@ class AsyncSqliteSink(BaseIngestSink):
         self.logger.debug("[SQLITE_ASYNC] Inserting RF log message: %s", data)
         try:
             async with aiosqlite.connect(self.database_path) as db:
-                values = [data.get(col) for col, _ in sql_definitions.rf_log_columns]
+                values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.rf_log_columns]
                 await db.execute(sql_definitions.INSERT_RF_LOG_MESSAGE, values)
                 await db.commit()
         except Exception as e:

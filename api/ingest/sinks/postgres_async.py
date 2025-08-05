@@ -32,7 +32,7 @@ class AsyncPostgresSink(BaseIngestSink):
         self.logger.debug("[POSTGRES_ASYNC] Inserting app_log: %s", data)
         conn = None
         try:
-            values = [data.get(col) for col, _ in sql_definitions.app_log_columns]
+            values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.app_log_columns]
             conn = await asyncpg.connect(self.database_url)
             async with conn.transaction():
                 await conn.execute(sql_definitions.INSERT_APP_LOG, *values)
@@ -48,7 +48,7 @@ class AsyncPostgresSink(BaseIngestSink):
         self.logger.debug("[POSTGRES_ASYNC] Inserting metric: %s", data)
         conn = None
         try:
-            values = [data.get(col) for col, _ in sql_definitions.metric_columns]
+            values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.metric_columns]
             conn = await asyncpg.connect(self.database_url)
             async with conn.transaction():
                 await conn.execute(sql_definitions.INSERT_METRIC, *values)
@@ -63,7 +63,7 @@ class AsyncPostgresSink(BaseIngestSink):
         self.logger.debug("[POSTGRES_ASYNC] Inserting RF event: %s", data)
         conn = None
         try:
-            values = [data.get(col) for col, _ in sql_definitions.event_columns]
+            values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.event_columns]
             conn = await asyncpg.connect(self.database_url)
             async with conn.transaction():
                 await conn.execute(sql_definitions.INSERT_EVENT, *values)
@@ -78,7 +78,7 @@ class AsyncPostgresSink(BaseIngestSink):
         self.logger.debug("[POSTGRES_ASYNC] Inserting RF log message: %s", data)
         conn = None
         try:
-            values = [data.get(col) for col, _ in sql_definitions.rf_log_columns]
+            values = [self.make_sql_safe(data.get(col)) for col, _ in sql_definitions.rf_log_columns]
             conn = await asyncpg.connect(self.database_url)
             async with conn.transaction():
                 await conn.execute(sql_definitions.INSERT_RF_LOG_MESSAGE, *values)
@@ -87,3 +87,4 @@ class AsyncPostgresSink(BaseIngestSink):
         finally:
             if conn:
                 await conn.close()
+

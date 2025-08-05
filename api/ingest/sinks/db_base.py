@@ -1,5 +1,6 @@
 ## realtimeresults/sinks/base.py
 from abc import ABC, abstractmethod
+import json
 import logging
 
 class BaseIngestSink(ABC):
@@ -44,3 +45,11 @@ class BaseIngestSink(ABC):
         """Must be implemented by async sinks."""
         pass
     
+    @staticmethod
+    def make_sql_safe(value):
+        """Convert non-string types to JSON strings for safe DB insertion."""
+        if value is None:
+            return None
+        if isinstance(value, (list, dict, bool)):
+            return json.dumps(value)
+        return value
