@@ -21,7 +21,7 @@ services:
   ingest-api:
     build:
       context: .
-      dockerfile: api/ingest/Dockerfile
+      dockerfile: docker/Dockerfile.ingest
     container_name: ingest_api
     environment:
       DB_URL: postgresql://realtime:realtimepass@postgres:5432/realtime_db
@@ -39,7 +39,7 @@ services:
   viewer-api:
     build:
       context: .
-      dockerfile: api/viewer/Dockerfile
+      dockerfile: docker/Dockerfile.viewer
     container_name: viewer_api
     environment:
       DB_URL: postgresql://realtime:realtimepass@postgres:5432/realtime_db
