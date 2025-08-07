@@ -1,9 +1,7 @@
 from fastapi import FastAPI
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.sinks.base import AsyncEventSink
-from api.ingest.sinks.sqlite_async import AsyncSqliteSink
-from api.ingest.sinks.postgres_async import AsyncPostgresSink
+from api.ingest.sinks import BaseIngestSink, AsyncSqliteSink, AsyncPostgresSink
 from api.ingest.routes import router as ingest_routes
 from contextlib import asynccontextmanager
 
@@ -30,7 +28,7 @@ else:
 # Lifespan context used to initialize the database on app startup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if isinstance(event_sink, AsyncEventSink):
+    if isinstance(event_sink, BaseIngestSink):
         try:
             await event_sink.initialize_database()
         except Exception as e:

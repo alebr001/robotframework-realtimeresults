@@ -1,7 +1,7 @@
 # api/viewer/readers/postgres_reader.py
 
 import psycopg2
-from .reader import Reader
+from .base_reader import Reader
 from shared.helpers.config_loader import load_config
 import shared.helpers.sql_definitions as sql_definitions
 

@@ -1,5 +1,5 @@
 import asyncpg
-from .db_base import BaseIngestSink
+from .base_sink import BaseIngestSink
 import shared.helpers.sql_definitions as sql_definitions
 from shared.helpers.ensure_db_schema import async_ensure_schema
 
