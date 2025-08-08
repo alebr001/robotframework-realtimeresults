@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-import sqlite3
 import logging
 
 router = APIRouter()
@@ -17,6 +16,10 @@ def get_dispatch_maps(event_sink):
         }, event_sink.handle_rf_events),
         "event/log_message": ({"log_message"}, event_sink.handle_rf_log),
     }
+
+@router.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 def get_handler_by_event_type(event_type: str, sink):
     dispatch = get_dispatch_maps(sink)
@@ -69,7 +72,8 @@ async def handle_event_request(request: Request, endpoint_name: str, allow_fallb
         if handler:
             await handler(event)
         else:
-            raise RuntimeError("Handler unexpectedly None")
+            logger.error(f"No handler for event_type={event_type}")
+            return JSONResponse(content={"error": "No handler found"}, status_code=500)
     except Exception:
         logger.error(f"[{endpoint_name.upper()}] Error handling event {event_type}.", exc_info=True)
         return JSONResponse(content={"error": "Internal server error"}, status_code=500)

@@ -52,8 +52,8 @@ class RealTimeResults:
         endpoint = ""
         try:
             if self.listener_sink_type == "http":
-                host = self.config.get("ingest_backend_host", "127.0.0.1")
-                port = self.config.get("ingest_backend_port", "8001")
+                host = self.config.get("ingest_client_host", self.config.get("ingest_backend_host", "127.0.0.1"))
+                port = self.config.get("ingest_client_port", self.config.get("ingest_backend_port", "8001"))
                 endpoint = f"http://{host}:{port}"
                 self.sink = HttpSink(endpoint=endpoint)
 

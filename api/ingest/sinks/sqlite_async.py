@@ -1,5 +1,5 @@
 import aiosqlite
-from .db_base import BaseIngestSink
+from .base_sink import BaseIngestSink
 from shared.helpers.ensure_db_schema import async_ensure_schema
 import shared.helpers.sql_definitions as sql_definitions
 

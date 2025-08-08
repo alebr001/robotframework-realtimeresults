@@ -1,9 +1,7 @@
 from fastapi import FastAPI
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
-from shared.sinks.base import AsyncEventSink
-from api.ingest.sinks.sqlite_async import AsyncSqliteSink
-from api.ingest.sinks.postgres_async import AsyncPostgresSink
+from api.ingest.sinks import BaseIngestSink, AsyncSqliteSink, AsyncPostgresSink
 from api.ingest.routes import router as ingest_routes
 from contextlib import asynccontextmanager
 
@@ -13,15 +11,9 @@ setup_root_logging(config.get("log_level", "info"))
 
 # Determine database type and create appropriate sink instance
 database_url = config.get("database_url", "sqlite:///eventlog.db")
-ingest_sink_type = config.get("ingest_sink_type", "async").lower()
 
-# For SQLite, only 'async' sink is currently supported
 if database_url.startswith("sqlite:///"):
-    if ingest_sink_type == "async":
-        event_sink = AsyncSqliteSink(database_url=database_url)
-    else:
-        raise ValueError(f"Unsupported sink_type in config: {ingest_sink_type}")
-# For PostgreSQL, async sink is always used
+    event_sink = AsyncSqliteSink(database_url=database_url)
 elif database_url.startswith(("postgresql://", "postgres://")):
     event_sink = AsyncPostgresSink(database_url=database_url)
 else:
@@ -30,7 +22,7 @@ else:
 # Lifespan context used to initialize the database on app startup
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if isinstance(event_sink, AsyncEventSink):
+    if isinstance(event_sink, BaseIngestSink):
         try:
             await event_sink.initialize_database()
         except Exception as e:

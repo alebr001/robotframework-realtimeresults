@@ -159,8 +159,11 @@ rt-robot --runservice python producers/metrics/metric_scraper.py
 docker compose up
 ```
 
-> When running inside Docker, always use `0.0.0.0` as the hosts.
-
+When running Docker:
+> Use `0.0.0.0` as the backend hosts  
+> Use 127.0.0.1 as client host for Ingest (Viewer can stay on 0.0.0.0).
+> Use postgresql as database_url
+> Set enable_autoservices: false
 
 ---
 
@@ -171,12 +174,11 @@ docker compose up
 rt-robot --config config.json tests/
 ```
 
-### Example config.json
+#### Example config.json
 
 ```json
 {
   "listener_sink_type": "http",
-  "ingest_sink_type": "async",
   "database_url": "sqlite:///eventlog.db, sqlite:///inmemory, postgresql://realtime:realtimepass@db:5432/realtime_db, etc",
   "viewer_backend_host": "127.0.0.1",
   "viewer_backend_port": 8002,
@@ -193,7 +195,47 @@ rt-robot --config config.json tests/
       "tz_info": "Europe/Amsterdam"
     }
   ],
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "log_level_listener": "",
+  "log_level_backend": "",
+  "log_level_cli": ""
+}
+```
+
+#### Docker friendly example
+```json
+{
+  "database_url": "postgresql://realtime:realtimepass@postgres:5432/realtime_db",
+  "enable_auto_services": false,
+
+  "_comment": "use this for binding the services",
+  "ingest_backend_host": "0.0.0.0",
+  "ingest_backend_port": 8001,
+  "viewer_backend_host": "0.0.0.0",
+  "viewer_backend_port": 8002,
+
+  "_comment2": "use this to connect to the services",
+  "ingest_client_host": "127.0.0.1",
+  "ingest_client_port": 8001,
+  "viewer_client_host": "0.0.0.0",
+  "viewer_client_port": 8002,
+
+  "source_log_tails": [
+      {
+          "path": "results/debug.log",
+          "label": "rf-debug",
+          "poll_interval": 1.0,
+          "event_type": "rf-debug",
+          "log_level": "INFO",
+          "tz_info": "Europe/Amsterdam"
+      }
+  ],
+  "listener_sink_type": "http",
+
+  "log_level": "DEBUG",
+  "log_level_listener": "",
+  "log_level_backend": "",
+  "log_level_cli": ""
 }
 ```
 
