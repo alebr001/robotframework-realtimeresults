@@ -51,8 +51,8 @@ class HttpSink(EventSink):
         try:
             requests.post(f"{self.endpoint}{path}", json=data, timeout=self.timeout)
         except requests.RequestException as e:
-            self.logger.warning("[HttpSink] Failed to send %s to %s: %s", event_type, path, e)
-
+            self.logger.warning("[HttpSink] Failed to send %s to %s", event_type, path)
+            self.logger.debug(f"Error details: {e}")
 
 class AsyncHttpSink(AsyncEventSink):
     """
@@ -77,7 +77,7 @@ class AsyncHttpSink(AsyncEventSink):
             # LOGS
             "app_log": "/log",
             "www_log": "/log",
-            "rf_debug_log": "/log",
+            "debug_log": "/log",
 
             # TEST EVENTS
             "start_test": "/event",
@@ -86,8 +86,10 @@ class AsyncHttpSink(AsyncEventSink):
             "end_suite": "/event",
             "start_keyword": "/event",
             "end_keyword": "/event",
-            "log_message": "/event",
             "test_step": "/event",
+            
+            # RF LOG MESSAGES
+            "log_message": "/event/log_message",
         }
 
     async def _async_handle_event(self, data):

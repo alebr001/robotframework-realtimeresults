@@ -58,8 +58,8 @@ def collect_metrics():
 
 
 async def main():
-    ingest_host = config.get("ingest_backend_host", "127.0.0.1")
-    ingest_port = config.get("ingest_backend_port", 8001)
+    ingest_host = config.get("ingest_client_host", config.get("ingest_backend_host", "127.0.0.1"))
+    ingest_port = config.get("ingest_client_port", config.get("ingest_backend_port", "8001"))
     endpoint = f"http://{ingest_host}:{ingest_port}"
 
     logger.info("Starting metric scraper. Ingest endpoint: %s", endpoint)

@@ -14,26 +14,33 @@ from shared.helpers.logger import setup_root_logging
 from shared.helpers.setup_wizard import run_setup_wizard
 from shared.helpers.kill_backend import kill_backend
 
+logger = logging.getLogger("rt-cli")
+
 def parse_args():
     """Simple manual parsing to support --runservice and --config."""
     service_name = None
-    config_path = "realtimeresults_config.json"
+    config_path = None
     robot_args = []
 
-    if "--runservice" in sys.argv:
+    if "--setup" in sys.argv:
+        logger.info("Running setup wizard.")
+        run_setup_wizard()
+        
+    if any(arg in sys.argv for arg in ["--runservice", "--run", "--start"]):
         runservice_index = sys.argv.index("--runservice")
         service_name = sys.argv[runservice_index + 1]
 
-    if "--killbackend" in sys.argv or "-kill_backend" in sys.argv:
-        print("Stopping local backend services for rt-robot.")
+    if any(arg in sys.argv for arg in ["--killbackend", "--kill_backend", "--kill"]):
+        logger.info("Stopping local backend services for rt-robot.")
         kill_backend()
         sys.exit(0)
 
     if "--help" in sys.argv or "-h" in sys.argv:
-        print(
+        logger.info(
             "Usage: python cli.py [options] [robot arguments]\n"
             "Options:\n"
             "  --help, -h           Show this help message and exit\n"
+            "  --setup              Create new configfile\n"
             "  --runservice NAME    Start a single backend service (viewer, ingest, combined)\n"
             "  --config PATH        Use a custom config file\n"
             "  --killbackend        Stop all backend services\n"
@@ -50,6 +57,7 @@ def parse_args():
         config_path = sys.argv[config_index + 1]
         robot_args = sys.argv[1:config_index] + sys.argv[config_index + 2:]
     else:
+        config_path = "realtimeresults_config.json"
         robot_args = sys.argv[1:]
 
     return service_name, Path(config_path), robot_args
@@ -203,27 +211,28 @@ def main():
     service_name, config_path, robot_args = parse_args()
 
     if not config_path.exists():
-        print(f"No config found at {config_path}. Launching setup wizard...")
+        logger.info(f"No config found at {config_path}. Launching setup wizard...")
         if not run_setup_wizard(config_path):
-            print("Setup completed. Please re-run this command.")
+            logger.info("Setup completed. Please re-run this command.")
             sys.exit(0)
 
     config = load_config(config_path)
+
+    setup_root_logging(config.get("log_level", "info"))
+    if lvl := config.get("log_level_cli"):
+        logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
+
+
     # set up environment variable for config path
     env = os.environ.copy()
     env["REALTIME_RESULTS_CONFIG"] = str(config_path)
-
-    setup_root_logging(config.get("log_level", "info"))
-    global logger
-    logger = logging.getLogger("rt-cli")
-    if lvl := config.get("log_level_cli"):
-        logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
 
     if service_name:
         command = get_command(service_name, config)
         # also inject all env vars (incl config path) into the process
         try:
-            os.execvp(command[0], command)
+            subprocess.run(command, env=env)
+            # os.execvp(command[0], command)
         except KeyboardInterrupt:
             logger.warning("Keyboard interrupt...")
         return
@@ -240,8 +249,10 @@ def main():
         logger.debug("Auto services are disabled. You need to start the backend services manually.")
         pids = {}
 
-    logger.debug(f"Viewer: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
-    logger.debug(f"Ingest: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
+    logger.debug(f"Viewer Backend: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
+    logger.debug(f"Viewer CLient: http://{config.get('viewer_client_host', '127.0.0.1')}:{config.get('viewer_client_port', 8002)}")
+    logger.debug(f"Ingest Backend: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
+    logger.debug(f"Ingest Client: http://{config.get('ingest_client_host', '127.0.0.1')}:{config.get('ingest_client_port', 8001)}")
     logger.debug(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
     
     command = [

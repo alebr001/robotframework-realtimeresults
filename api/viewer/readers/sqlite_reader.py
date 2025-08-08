@@ -1,6 +1,6 @@
 # backend/sqlite_reader.py
 import sqlite3
-from .reader import Reader
+from .base_reader import Reader
 from shared.helpers.config_loader import load_config
 import shared.helpers.sql_definitions as sql_definitions
 
