@@ -14,12 +14,16 @@ class Reader(ABC):
         return self._get_events()
     
     def get_app_logs(self):
-        self.logger.debug("Clearing events using %s", self.__class__.__name__)
+        self.logger.debug("Fetching App logs using %s", self.__class__.__name__)
         return self._get_app_logs()
     
     def clear_events(self):
         self.logger.debug("Clearing events using %s", self.__class__.__name__)
         return self._clear_events()
+
+    def get_events_since(self):
+        self.logger.debug("Get new events using %s", self.__class__.__name__)
+        return self._get_events_since()
 
     @abstractmethod
     def _get_events(self) -> List[Dict]:
@@ -33,5 +37,9 @@ class Reader(ABC):
 
     @abstractmethod
     def _clear_events(self) -> None:
+        """Internal method implemented by subclass"""
+        pass
+
+    def _get_events_since(self):
         """Internal method implemented by subclass"""
         pass

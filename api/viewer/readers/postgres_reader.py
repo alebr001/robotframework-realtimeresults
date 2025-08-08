@@ -14,6 +14,8 @@ class PostgresReader(Reader):
         self.database_url = database_url or config.get("database_url")
         self.conn = conn
 
+
+
     def _get_connection(self):
         self.logger.debug("Connecting to PostgreSQL at %s", self.database_url)
         if self.conn is not None:
@@ -53,3 +55,4 @@ class PostgresReader(Reader):
         finally:
             if should_close:
                 conn.close()
+

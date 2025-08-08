@@ -3,6 +3,7 @@ import sqlite3
 from .base_reader import Reader
 from shared.helpers.config_loader import load_config
 import shared.helpers.sql_definitions as sql_definitions
+import aiosqlite
 
 from typing import List, Dict
 
@@ -27,6 +28,13 @@ class SqliteReader(Reader):
         else:
             return sqlite3.connect(self.database_url), True  # True = close the connection
 
+
+    async def _get_events_since(self, last_id):
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute("SELECT * FROM events WHERE id > ? ORDER BY id ASC", (last_id,))
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+        
     def _fetch_all_as_dicts(self, query: str) -> List[Dict]:
         self.logger.debug("Executing SQL -> %s", query)
         conn, should_close = self._get_connection()

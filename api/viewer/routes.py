@@ -1,7 +1,8 @@
 # api/viewer/routes.py
 from fastapi import Depends, APIRouter, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from datetime import datetime, timezone
+import asyncio, json
 import logging
 
 router = APIRouter()
@@ -9,6 +10,19 @@ logger = logging.getLogger("rt.api.viewer")
 
 def get_event_reader(request: Request):
     return request.app.state.event_reader
+
+@router.get("/events/stream")
+async def stream_events(reader = Depends(get_event_reader)):
+    async def event_generator():
+        last_id = 0
+        while True:
+            new_events = reader.get_events_since(last_id)
+            for event in new_events:
+                yield f"data: {json.dumps(event)}\n\n"
+                last_id = event["id"]
+            await asyncio.sleep(0.5)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 @router.get("/applog")
 def get_applog(reader = Depends(get_event_reader)):
@@ -21,7 +35,6 @@ def get_events(reader = Depends(get_event_reader)):
 @router.get("/events/clear")
 def clear_events(reader = Depends(get_event_reader)):
     logger.debug("Initiating clear_events() via GET /events/clear")
-
     try:
         reader.clear_events()
         logger.info("Successfully cleared all events using %s", reader.__class__.__name__)
