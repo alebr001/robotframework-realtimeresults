@@ -30,7 +30,7 @@ jobs:
         run: |
           cat > realtimeresults_config.json <<EOF
           {
-            "listener_sink_type": "http",
+            "listener_sink_type": "http"
           }
           EOF
 
