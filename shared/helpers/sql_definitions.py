@@ -25,7 +25,7 @@ def placeholders(n: int) -> str:
     return ", ".join([placeholder(i + 1) for i in range(n)])
 
 # Define ID column depending on backend
-ID_FIELD = "id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY" if is_postgres() else "id INTEGER PRIMARY KEY AUTOINCREMENT"
+ID_FIELD = "id SERIAL PRIMARY KEY" if is_postgres() else "id INTEGER PRIMARY KEY AUTOINCREMENT"
 
 # === Robot Framework Events Table ===
 event_columns = [
