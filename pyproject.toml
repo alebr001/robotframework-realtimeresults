@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "robotframework-realtimeresults"
-version = "v0.4.1"
+version = "v4.1.0"
 description = "Realtime Robot Framework listener with FastAPI backend and Loki integration."
 authors = ["Jurgen Alebregtse j.alebregtse@gmail.com"]
 license = "MIT"
