@@ -26,8 +26,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Setup config
-        run: echo "{}" > realtimeresults_config.json
+      - name: Create minimal config for tests
+        run: |
+          cat > realtimeresults_config.json <<EOF
+          {
+            "listener_sink_type": "http"
+          }
+          EOF
+
 
       - name: In stall dependencies
         run: |

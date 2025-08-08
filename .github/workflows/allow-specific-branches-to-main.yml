@@ -10,16 +10,39 @@ jobs:
   enforce-allowed-branches:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Check if source branch is allowed
+        id: check-branch
         run: |
           echo "Source branch: ${{ github.head_ref }}"
 
-          if [[ "${{ github.head_ref }}" == "develop" ]] ||
-             [[ "${{ github.head_ref }}" == release/* ]] ||
+          if [[ "${{ github.head_ref }}" == release/* ]] ||
              [[ "${{ github.head_ref }}" == hotfix/* ]]; then
-            echo "Allowed branch: merge permitted"
-            exit 0
+            echo "allowed=true" >> $GITHUB_OUTPUT
           else
-            echo "Only 'develop', 'release/*' or 'hotfix/*' branches may merge to main"
+            echo "Only 'release/*' or 'hotfix/*' branches may merge to main"
             exit 1
           fi
+
+      - name: Fail if version is same as main (for release/hotfix branches)
+        id: check-version-bump
+        run: |
+          # Versie in PR branch
+          CURRENT_VERSION=$(grep '^version = "' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          echo "PR branch version: $CURRENT_VERSION"
+
+          # Versie in main branch
+          git fetch origin main
+          MAIN_VERSION=$(git show origin/main:pyproject.toml | grep '^version = "' | sed -E 's/version = "(.*)"/\1/')
+          echo "Main branch version: $MAIN_VERSION"
+
+          if [ "$CURRENT_VERSION" = "$MAIN_VERSION" ]; then
+            echo "PR branch version ($CURRENT_VERSION) is equal to main — merge blocked."
+            exit 1
+          fi
+
+          echo "Version is OK to merge."

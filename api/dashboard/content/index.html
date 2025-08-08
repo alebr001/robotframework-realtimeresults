@@ -120,7 +120,7 @@
             const logContainer = document.getElementById("logMessages");
 
             const logs = events.map(e => {
-                const date = e.timestamp ?? "";
+                const date = e.endtime ?? "";
                 const level = e.level ?? "";
                 const type = e.event_type ?? "";
                 const msg = e.message ?? "";
@@ -193,7 +193,7 @@
                 const row = document.createElement("tr");
 
                 const timeCell = document.createElement("td");
-                timeCell.textContent = fail.timestamp || "(geen tijd)";
+                timeCell.textContent = fail.endtime || "(geen tijd)";
 
                 const nameCell = document.createElement("td");
                 nameCell.textContent = fail.name;
@@ -258,12 +258,12 @@
         let suiteStartTime = null;
         let suiteEndTime = null;
 
-        function extractSuiteTimestamps(events) {
+        function extractSuiteendtimes(events) {
             const startSuite = events.find(e => e.event_type === "start_suite");
             const endSuite = events.find(e => e.event_type === "end_suite");
 
-            if (startSuite) suiteStartTime = new Date(startSuite.timestamp);
-            if (endSuite) suiteEndTime = new Date(endSuite.timestamp);
+            if (startSuite) suiteStartTime = new Date(startSuite.endtime);
+            if (endSuite) suiteEndTime = new Date(endSuite.endtime);
         }
 
         function updateElapsedTime() {
@@ -287,7 +287,7 @@
             updateFailTable(events);
             updateLogMessages(appLogs);
 
-            extractSuiteTimestamps(events);
+            extractSuiteendtimes(events);
             updateElapsedTime();
         }
 

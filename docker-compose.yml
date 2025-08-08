@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: realtime
+      POSTGRES_PASSWORD: realtimepass
+      POSTGRES_DB: realtime_db
+      TZ: Europe/Amsterdam
+      PGTZ: Europe/Amsterdam
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - realtime_net
+    restart: unless-stopped
+
+  ingest-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingest
+    container_name: ingest_api
+    environment:
+      DB_URL: postgresql://realtime:realtimepass@postgres:5432/realtime_db
+    volumes:
+      - ./shared:/app/shared
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
+    networks:
+      - realtime_net
+    restart: unless-stopped
+    image: robotframework-realtimeresults-ingest-api
+
+  viewer-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.viewer
+    container_name: viewer_api
+    environment:
+      DB_URL: postgresql://realtime:realtimepass@postgres:5432/realtime_db
+    volumes:
+      - ./shared:/app/shared
+    ports:
+      - "8002:8002"
+    depends_on:
+      - postgres
+    networks:
+      - realtime_net
+    restart: unless-stopped
+    image: robotframework-realtimeresults-viewer-api
+
+  # dashboard:
+  #   image: nginx:stable-alpine
+  #   container_name: realtime_dashboard
+  #   volumes:
+  #     - ./dashboard:/usr/share/nginx/html:ro
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   ports:
+  #     - "8080:80"
+  #   depends_on:
+  #     - viewer-api
+  #   networks:
+  #     - realtime_net
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  realtime_net:
+    driver: bridge

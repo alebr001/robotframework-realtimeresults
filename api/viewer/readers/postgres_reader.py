@@ -1,40 +1,39 @@
-# backend/sqlite_reader.py
-import sqlite3
+# api/viewer/readers/postgres_reader.py
+
+import psycopg2
 from .base_reader import Reader
 from shared.helpers.config_loader import load_config
 import shared.helpers.sql_definitions as sql_definitions
 
 from typing import List, Dict
 
-class SqliteReader(Reader):
+class PostgresReader(Reader):
     def __init__(self, database_url=None, conn=None):
         super().__init__()
         config = load_config()
-        raw_path = database_url or config.get("database_url", "sqlite:///eventlog.db")
-
-        # Strip 'sqlite:///' prefix if present
-        if raw_path.startswith("sqlite:///"):
-            self.database_url = raw_path.replace("sqlite:///", "", 1)
-        else:
-            self.database_url = raw_path
-
+        self.database_url = database_url or config.get("database_url")
         self.conn = conn
 
     def _get_connection(self):
-        self.logger.debug("Connecting to Sqlite at %s", self.database_url)
+        self.logger.debug("Connecting to PostgreSQL at %s", self.database_url)
         if self.conn is not None:
-            return self.conn, False  # False = do not close the connection
+            return self.conn, False
         else:
-            return sqlite3.connect(self.database_url), True  # True = close the connection
+            try:
+                return psycopg2.connect(self.database_url), True
+            except psycopg2.OperationalError as e:
+                self.logger.error("Failed to connect to PostgreSQL is the service running? %s", e)
+                raise
 
     def _fetch_all_as_dicts(self, query: str) -> List[Dict]:
         self.logger.debug("Executing SQL -> %s", query)
         conn, should_close = self._get_connection()
         try:
-            cursor = conn.cursor()
-            rows = cursor.execute(query).fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                columns = [desc[0] for desc in cursor.description]
+                return [dict(zip(columns, row)) for row in rows]
         finally:
             if should_close:
                 conn.close()
@@ -48,9 +47,9 @@ class SqliteReader(Reader):
     def _clear_events(self) -> None:
         conn, should_close = self._get_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute(sql_definitions.DELETE_ALL_EVENTS)
-            conn.commit()
+            with conn.cursor() as cursor:
+                cursor.execute(sql_definitions.DELETE_ALL_EVENTS)
+                conn.commit()
         finally:
             if should_close:
                 conn.close()

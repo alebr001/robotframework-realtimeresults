@@ -1,67 +1,78 @@
 import pytest
-import sqlite3
-
-from httpx import AsyncClient, ASGITransport
-from api.ingest.main import app
-from shared.sinks.sqlite_async import AsyncSqliteSink
-
-from api.ingest.main import app, event_sink
+from fastapi.testclient import TestClient
+from api.ingest.app_factory import create_app
 
 
-@pytest.mark.asyncio
-async def test_event_post_success(monkeypatch, test_event):
-    def dummy_handler(event):
-        pass  # do nothing, just simulate success
+class DummySink:
+    def __init__(self):
+        self.handled_events = []
 
-    monkeypatch.setattr(event_sink, "handle_event", dummy_handler)
+    async def handle_app_log(self, event):
+        self.handled_events.append(("log", event))
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/event", json=test_event)
-        assert response.status_code == 200
-        assert response.json()["received"] is True
+    async def handle_metric(self, event):
+        self.handled_events.append(("metric", event))
+
+    async def handle_rf_events(self, event):
+        self.handled_events.append(("event", event))
+
+    async def handle_rf_log(self, event):
+        self.handled_events.append(("event/log_message", event))
+
+    async def initialize_database(self):
+        pass  # No-op for testing
 
 
-# Testdata
 @pytest.fixture
-def test_event():
-    return {"event_type": "log_message", "level": "INFO", "message": "Test log"}
+def client(monkeypatch):
+    app = create_app()
+    dummy_sink = DummySink()
+    app.state.event_sink = dummy_sink
+    return TestClient(app), dummy_sink
 
-@pytest.mark.asyncio
-async def test_log_get_info_returns_message():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/log")
-        assert response.status_code == 200
-        assert "status" in response.json()
-        assert "expects POST" in response.json()["status"]
 
-@pytest.mark.asyncio
-async def test_log_post_success(test_event):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/log", json=test_event)
-        assert response.status_code == 200
-        assert response.json()["received"] is True
+def test_log_endpoint_valid_event(client):
+    client, sink = client
+    payload = {"event_type": "app_log", "message": "test log"}
+    response = client.post("/log", json=payload)
+    assert response.status_code == 200
+    assert response.json() == {"received": True}
+    assert sink.handled_events[0][0] == "log"
 
-@pytest.mark.asyncio
-async def test_log_post_missing_event_type():
-    bad_event = {"foo": "bar"}
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/log", json=bad_event)
-        assert response.status_code == 400
-        assert "event_type is missing" in response.text
 
-@pytest.mark.asyncio
-async def test_sqlite_operational_error(monkeypatch, test_event):
-    async def broken_handle_event(self, event):
-        raise sqlite3.OperationalError("test failure")
+def test_metric_endpoint_valid_event(client):
+    client, sink = client
+    payload = {"event_type": "metric", "value": 42}
+    response = client.post("/metric", json=payload)
+    assert response.status_code == 200
+    assert sink.handled_events[0][0] == "metric"
 
-    monkeypatch.setattr(AsyncSqliteSink, "async_handle_event", broken_handle_event)
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/log", json=test_event)
-        assert response.status_code == 500
-        assert "Unexpected error" in response.text
+def test_event_endpoint_valid_event(client):
+    client, sink = client
+    payload = {"event_type": "start_test", "name": "Login"}
+    response = client.post("/event", json=payload)
+    assert response.status_code == 200
+    assert sink.handled_events[0][0] == "event"
+
+
+def test_event_log_message_valid(client):
+    client, sink = client
+    payload = {"event_type": "log_message", "message": "Something happened"}
+    response = client.post("/event/log_message", json=payload)
+    assert response.status_code == 200
+    assert sink.handled_events[0][0] == "event/log_message"
+
+
+def test_missing_event_type(client):
+    client, _ = client
+    response = client.post("/log", json={"foo": "bar"})
+    assert response.status_code == 400
+    assert "Missing event_type" in response.json()["error"]
+
+
+def test_invalid_event_type(client):
+    client, _ = client
+    response = client.post("/metric", json={"event_type": "something_else"})
+    assert response.status_code == 400
+    assert "Invalid event_type" in response.json()["error"]
