@@ -17,23 +17,28 @@ from shared.helpers.kill_backend import kill_backend
 def parse_args():
     """Simple manual parsing to support --runservice and --config."""
     service_name = None
-    config_path = "realtimeresults_config.json"
+    config_path = None
     robot_args = []
 
-    if "--runservice" in sys.argv:
+    if "--setup" in sys.argv:
+        logger.info("Running setup wizard.")
+        run_setup_wizard()
+        
+    if any(arg in sys.argv for arg in ["--runservice", "--run", "--start"]):
         runservice_index = sys.argv.index("--runservice")
         service_name = sys.argv[runservice_index + 1]
 
-    if "--killbackend" in sys.argv or "-kill_backend" in sys.argv:
-        print("Stopping local backend services for rt-robot.")
+    if any(arg in sys.argv for arg in ["--killbackend", "--kill_backend", "--kill"]):
+        logger.info("Stopping local backend services for rt-robot.")
         kill_backend()
         sys.exit(0)
 
     if "--help" in sys.argv or "-h" in sys.argv:
-        print(
+        logger.info(
             "Usage: python cli.py [options] [robot arguments]\n"
             "Options:\n"
             "  --help, -h           Show this help message and exit\n"
+            "  --setup              Create new configfile\n"
             "  --runservice NAME    Start a single backend service (viewer, ingest, combined)\n"
             "  --config PATH        Use a custom config file\n"
             "  --killbackend        Stop all backend services\n"
@@ -50,6 +55,7 @@ def parse_args():
         config_path = sys.argv[config_index + 1]
         robot_args = sys.argv[1:config_index] + sys.argv[config_index + 2:]
     else:
+        config_path = "realtimeresults_config.json"
         robot_args = sys.argv[1:]
 
     return service_name, Path(config_path), robot_args
@@ -223,7 +229,8 @@ def main():
         command = get_command(service_name, config)
         # also inject all env vars (incl config path) into the process
         try:
-            os.execvp(command[0], command)
+            subprocess.run(command, env=env)
+            # os.execvp(command[0], command)
         except KeyboardInterrupt:
             logger.warning("Keyboard interrupt...")
         return
@@ -240,8 +247,10 @@ def main():
         logger.debug("Auto services are disabled. You need to start the backend services manually.")
         pids = {}
 
-    logger.debug(f"Viewer: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
-    logger.debug(f"Ingest: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
+    logger.debug(f"Viewer Backend: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
+    logger.debug(f"Viewer CLient: http://{config.get('viewer_client_host', '127.0.0.1')}:{config.get('viewer_client_port', 8002)}")
+    logger.debug(f"Ingest Backend: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
+    logger.debug(f"Ingest Client: http://{config.get('ingest_client_host', '127.0.0.1')}:{config.get('ingest_client_port', 8001)}")
     logger.debug(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
     
     command = [

@@ -113,8 +113,8 @@ async def main():
         logger.error(f"Failed to load config: {e}")
         sys.exit(1)
 
-    ingest_host = config.get("ingest_backend_host", "127.0.0.1")
-    ingest_port = config.get("ingest_backend_port", 8001)
+    ingest_host = config.get("ingest_client_host", config.get("ingest_backend_host", "127.0.0.1"))
+    ingest_port = config.get("ingest_client_port", config.get("ingest_backend_port", "8001"))
     ingest_endpoint = f"http://{ingest_host}:{ingest_port}"
     logger.info(f"Using ingest endpoint: {ingest_endpoint}")
 

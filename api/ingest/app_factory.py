@@ -11,15 +11,9 @@ setup_root_logging(config.get("log_level", "info"))
 
 # Determine database type and create appropriate sink instance
 database_url = config.get("database_url", "sqlite:///eventlog.db")
-ingest_sink_type = config.get("ingest_sink_type", "async").lower()
 
-# For SQLite, only 'async' sink is currently supported
 if database_url.startswith("sqlite:///"):
-    if ingest_sink_type == "async":
-        event_sink = AsyncSqliteSink(database_url=database_url)
-    else:
-        raise ValueError(f"Unsupported sink_type in config: {ingest_sink_type}")
-# For PostgreSQL, async sink is always used
+    event_sink = AsyncSqliteSink(database_url=database_url)
 elif database_url.startswith(("postgresql://", "postgres://")):
     event_sink = AsyncPostgresSink(database_url=database_url)
 else:

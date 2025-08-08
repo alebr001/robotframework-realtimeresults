@@ -1,9 +1,7 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16
-    container_name: realtime_postgres
+    container_name: postgres
     environment:
       POSTGRES_USER: realtime
       POSTGRES_PASSWORD: realtimepass
