@@ -14,6 +14,8 @@ from shared.helpers.logger import setup_root_logging
 from shared.helpers.setup_wizard import run_setup_wizard
 from shared.helpers.kill_backend import kill_backend
 
+logger = logging.getLogger("rt-cli")
+
 def parse_args():
     """Simple manual parsing to support --runservice and --config."""
     service_name = None
@@ -209,21 +211,21 @@ def main():
     service_name, config_path, robot_args = parse_args()
 
     if not config_path.exists():
-        print(f"No config found at {config_path}. Launching setup wizard...")
+        logger.info(f"No config found at {config_path}. Launching setup wizard...")
         if not run_setup_wizard(config_path):
-            print("Setup completed. Please re-run this command.")
+            logger.info("Setup completed. Please re-run this command.")
             sys.exit(0)
 
     config = load_config(config_path)
+
+    setup_root_logging(config.get("log_level", "info"))
+    if lvl := config.get("log_level_cli"):
+        logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
+
+
     # set up environment variable for config path
     env = os.environ.copy()
     env["REALTIME_RESULTS_CONFIG"] = str(config_path)
-
-    setup_root_logging(config.get("log_level", "info"))
-    global logger
-    logger = logging.getLogger("rt-cli")
-    if lvl := config.get("log_level_cli"):
-        logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
 
     if service_name:
         command = get_command(service_name, config)

@@ -9,13 +9,13 @@ import shared.helpers.cli as cli
 
 class TestCliWrapper(unittest.TestCase):
 
-    @patch("builtins.print")
+    @patch("shared.helpers.cli.logger")
     @patch("sys.exit")
-    def test_help_flag(self, mock_exit, mock_print):
+    def test_help_flag(self, mock_exit, mock_logger):
         test_argv = ["cli.py", "--help"]
         with patch.object(sys, "argv", test_argv):
             cli.parse_args()
-            mock_print.assert_called()
+            mock_logger.info.assert_called()
             mock_exit.assert_called_once_with(0)
 
     @patch("shared.helpers.cli.kill_backend")
@@ -53,25 +53,26 @@ class TestCliWrapper(unittest.TestCase):
             self.assertEqual(config_path, Path("x.json"))
             self.assertEqual(robot_args, ["--outputdir", "logs/", "tests/"])
 
-    @patch("shared.helpers.cli.load_config", return_value={})  # extra mock toegevoegd
+    @patch("shared.helpers.cli.logger")
+    @patch("shared.helpers.cli.load_config", return_value={})
     @patch("shared.helpers.cli.run_setup_wizard", return_value=False)
     @patch("shared.helpers.cli.Path.exists", return_value=False)
-    @patch("builtins.print")
     @patch("sys.exit")
-    def test_main_runs_setup_if_config_missing(self, mock_exit, mock_print, mock_exists, mock_wizard, mock_config):
+    def test_main_runs_setup_if_config_missing(self, mock_exit, mock_exists, mock_wizard, mock_config, mock_logger):
         test_argv = ["cli.py"]
         with patch.object(sys, "argv", test_argv):
             cli.main()
-            mock_print.assert_any_call("No config found at realtimeresults_config.json. Launching setup wizard...")
+            mock_logger.info.assert_any_call("No config found at realtimeresults_config.json. Launching setup wizard...")
             mock_exit.assert_called_once_with(0)
+
 
     @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8002})
     @patch("shared.helpers.cli.Path.exists", return_value=True)
     @patch("shared.helpers.cli.start_services", return_value={"api.viewer.main:app": 999})
     @patch("shared.helpers.cli.count_tests", return_value=3)
     @patch("shared.helpers.cli.subprocess.run")
-    @patch("builtins.print")
-    def test_main_robot_run(self, mock_print, mock_subproc, mock_count, mock_start, mock_exists, mock_config):
+    @patch("shared.helpers.cli.logger")
+    def test_main_robot_run(self, mock_logger, mock_subproc, mock_count, mock_start, mock_exists, mock_config):
         test_argv = ["cli.py", "--outputdir", "results/", "tests/"]
         with patch.object(sys, "argv", test_argv):
             cli.main()
@@ -79,17 +80,21 @@ class TestCliWrapper(unittest.TestCase):
                 "robot", "--listener", "producers.listener.listener.RealTimeResults:totaltests=3",
                 "--outputdir", "results/", "tests/"
             ])
+            mock_logger.info.assert_any_call("Starting testrun. Total tests: 3")
 
-
-    @patch("shared.helpers.cli.os.execvp")
+    @patch("shared.helpers.cli.subprocess.run")
     @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8002})
     @patch("shared.helpers.cli.Path.exists", return_value=True)
-    def test_main_runservice_direct(self, mock_exists, mock_config, mock_execvp):
+    @patch("shared.helpers.cli.logger")
+    def test_main_runservice_direct(self, mock_logger, mock_exists, mock_config, mock_subproc):
         test_argv = ["cli.py", "--runservice", "api.viewer.main:app"]
         with patch.object(sys, "argv", test_argv):
             cli.main()
-            mock_execvp.assert_called_once()
-            assert "uvicorn" in mock_execvp.call_args[0][1]
+            mock_subproc.assert_called_once()
+            args_passed = mock_subproc.call_args[0][0]  # eerste argument: de command list
+            assert "uvicorn" in args_passed
+            assert "api.viewer.main:app" in args_passed
+
 
     def test_is_port_used_false(self):
         command = [sys.executable, "--host", "127.0.0.1", "--port", "9999"]
