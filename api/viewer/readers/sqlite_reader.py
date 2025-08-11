@@ -1,64 +1,62 @@
-# backend/sqlite_reader.py
 import sqlite3
-from .base_reader import Reader
-from shared.helpers.config_loader import load_config
-import shared.helpers.sql_definitions as sql_definitions
-import aiosqlite
+from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse
 
-from typing import List, Dict
-
-class SqliteReader(Reader):
-    def __init__(self, database_url=None, conn=None):
+class SqliteReader:
+    def __init__(self, database_url: str):
         super().__init__()
-        config = load_config()
-        raw_path = database_url or config.get("database_url", "sqlite:///eventlog.db")
 
-        # Strip 'sqlite:///' prefix if present
-        if raw_path.startswith("sqlite:///"):
-            self.database_url = raw_path.replace("sqlite:///", "", 1)
-        else:
-            self.database_url = raw_path
+        # Expect form sqlite:///path/to/file.db
+        parsed = urlparse(database_url)
+        if parsed.scheme != "sqlite":
+            raise ValueError("Invalid sqlite URL")
+        # On Windows, netloc may be empty; path includes leading '/'
+        self._db_path = parsed.path.lstrip("/") if parsed.path else ":memory:"
 
-        self.conn = conn
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self._db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
 
-    def _get_connection(self):
-        self.logger.debug("Connecting to Sqlite at %s", self.database_url)
-        if self.conn is not None:
-            return self.conn, False  # False = do not close the connection
-        else:
-            return sqlite3.connect(self.database_url), True  # True = close the connection
+    def get_latest_event_id(self, tenant_id: str = "default") -> int:
+        with self._connect() as db:
+            cur = db.execute(
+                "SELECT COALESCE(MAX(id), 0) AS max_id FROM events WHERE tenant_id = ?",
+                (tenant_id,)
+            )
+            row = cur.fetchone()
+            return int(row["max_id"]) if row and row["max_id"] is not None else 0
 
-
-    async def _get_events_since(self, last_id):
-        async with aiosqlite.connect(self.db_path) as db:
-            cursor = await db.execute("SELECT * FROM events WHERE id > ? ORDER BY id ASC", (last_id,))
-            rows = await cursor.fetchall()
-            return [dict(row) for row in rows]
+    def get_events_since(self, last_id: int, tenant_id: str = "default") -> List[Dict[str, Any]]:
+        with self._connect() as db:
+            cur = db.execute(
+                """
+                SELECT id, event_type, status, starttime, endtime, suite, name, message, tenant_id
+                FROM events
+                WHERE id > ? AND tenant_id = ?
+                ORDER BY id ASC
+                """,
+                (last_id, tenant_id)
+            )
+            rows = cur.fetchall()
+            return [dict(r) for r in rows]
         
-    def _fetch_all_as_dicts(self, query: str) -> List[Dict]:
-        self.logger.debug("Executing SQL -> %s", query)
-        conn, should_close = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            rows = cursor.execute(query).fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-        finally:
-            if should_close:
-                conn.close()
+    def clear_events(self, tenant_id: str = "default"):
+        with self._connect() as db:
+            db.execute("DELETE FROM events WHERE tenant_id = ?", (tenant_id,))
+            db.commit()
 
-    def _get_events(self) -> List[Dict]:
-        return self._fetch_all_as_dicts(sql_definitions.SELECT_ALL_EVENTS)
-
-    def _get_app_logs(self) -> List[Dict]:
-        return self._fetch_all_as_dicts(sql_definitions.SELECT_ALL_APP_LOGS)
-
-    def _clear_events(self) -> None:
-        conn, should_close = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(sql_definitions.DELETE_ALL_EVENTS)
-            conn.commit()
-        finally:
-            if should_close:
-                conn.close()
+    def get_app_logs(self, tenant_id: str = "default", limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        sql = (
+            "SELECT id, timestamp, level, message, event_type, tenant_id "
+            "FROM app_logs WHERE tenant_id = ? ORDER BY id DESC"
+        )
+        params = [tenant_id]
+        if limit:
+            sql += " LIMIT ?"
+            params.append(str(limit))
+        with self._connect() as db:
+            cur = db.execute(sql, tuple(params))
+            rows = cur.fetchall()
+            # return newest first -> caller may reverse
+            return [dict(r) for r in rows]

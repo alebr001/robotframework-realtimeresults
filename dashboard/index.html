@@ -15,6 +15,28 @@
             color: #333;
         }
 
+        .status-bar {
+            background-color: #e9ecef;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.875rem;
+            color: white;
+        }
+
+        .connected { background-color: #28a745; }
+        .disconnected { background-color: #dc3545; }
+        .connecting { background-color: #ffc107; color: #212529; }
+
         button {
             margin-bottom: 2rem;
             padding: 0.5rem 1rem;
@@ -78,8 +100,15 @@
 </head>
 <body>
     <h1>Realtime Test Result Overview</h1>
-    <div id="elapsed-container">
-    <strong>Totale tijd:</strong> <span id="elapsed-display">0s</span>
+    
+    <div class="status-bar">
+        <div>
+            <strong>Totale tijd:</strong> <span id="elapsed-display">—</span>
+        </div>
+        <div>
+            <span class="connection-status connecting" id="events-status">Events: Connecting...</span>
+            <span class="connection-status connecting" id="logs-status">Logs: Connecting...</span>
+        </div>
     </div>
 
     <div id="dashboard-container">
@@ -107,92 +136,131 @@
     </table>
 
     <script>
-        let chart;
+        // prevent double init on live reload / duplicate script tags
+        if (window.__rtDashboardInitialized) {
+            console.warn("RealtimeResults dashboard already initialized; skipping.");
+        } else {
+            window.__rtDashboardInitialized = true;
 
-        function updateLogMessages(events) {
-            const logContainer = document.getElementById("logMessages");
+            // --- Chart state ---
+            let chart;
+            const statusCounts = { PASS: 0, FAIL: 0, SKIP: 0 };
 
-            const logs = events.map(e => {
-                const date = e.endtime ?? "";
-                const level = e.level ?? "";
-                const type = e.event_type ?? "";
-                const msg = e.message ?? "";
-                return `${date} | ${level} | ${type} | ${msg}`;
-            }).join('\n');
+            // --- Suite timing state ---
+            let suiteStartTime = null;
+            let suiteEndTime = null;
+            let elapsedTimer = null;
 
-            logContainer.textContent = logs;
-        }
+            // --- Failure table state (to avoid duplicates) ---
+            const seenFailureIds = new Set();
 
-        async function clearEvents() {
-            const response = await fetch("/events/clear");
-            if (response.ok) {
-                console.log("Events cleared");
-                await pollForUpdates();
-            } else {
-                console.error("Failed to clear events");
+            // --- Connection state ---
+            let eventsConnection = null;
+            let logsConnection = null;
+
+            // --- Status indicators ---
+            function updateConnectionStatus(type, status) {
+                const element = document.getElementById(`${type}-status`);
+                element.className = `connection-status ${status}`;
+                element.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${
+                    status === 'connected' ? 'Connected' :
+                    status === 'connecting' ? 'Connecting...' :
+                    'Disconnected'
+                }`;
             }
-        }
 
-        async function fetchEvents() {
-            const response = await fetch("/events");
-            return await response.json();
-        }
-
-         async function fetchAppLog() {
-            const response = await fetch("/applog");
-            return await response.json();
-        }
-
-        function groupByStatus(events) {
-            const counts = { PASS: 0, FAIL: 0, SKIP: 0 };
-            for (const e of events) {
-                if (e.event_type === "end_test") {
-                    counts[e.status] = (counts[e.status] || 0) + 1;
-                }
+            // --- Utility: update elapsed display every second while running ---
+            function startElapsedTicker() {
+                if (elapsedTimer) return;
+                elapsedTimer = setInterval(updateElapsedTime, 1000);
             }
-            return counts;
-        }
-
-        function updateChartData(data) {
-            const counts = Object.values(data);
-            const maxCount = Math.max(...counts);
-            const newMax = Math.ceil((maxCount + 1) / 5) * 5;
-
-            chart.data.labels = Object.keys(data);
-            chart.data.datasets[0].data = counts;
-
-            chart.options.scales.y = {
-                min: 0,
-                max: newMax,
-                ticks: {
-                    precision: 0,
-                    stepSize: 1
+            
+            function stopElapsedTicker() {
+                if (elapsedTimer) {
+                    clearInterval(elapsedTimer);
+                    elapsedTimer = null;
                 }
-            };
+                updateElapsedTime(); // final render
+            }
 
-            chart.update();
-        }
+            function updateElapsedTime() {
+                const display = document.getElementById("elapsed-display");
+                if (!suiteStartTime) {
+                    display.textContent = "—";
+                    return;
+                }
+                const now = suiteEndTime ? suiteEndTime : new Date();
+                const seconds = Math.max(0, Math.floor((now - suiteStartTime) / 1000));
+                display.textContent = `${seconds}s`;
+            }
 
-        function updateFailTable(events) {
-            const tableBody = document.querySelector("#failTable tbody");
-            tableBody.innerHTML = "";
+            // --- Chart init & update ---
+            function initChart() {
+                const ctx = document.getElementById("statusChart").getContext("2d");
+                chart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: ["PASS", "FAIL", "SKIP"],
+                        datasets: [{
+                            label: "Aantal tests per status",
+                            data: [0, 0, 0],
+                            backgroundColor: ["green", "red", "gray"]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0, stepSize: 1 }
+                            }
+                        }
+                    }
+                });
+            }
 
-            const failures = events.filter(e => e.event_type === "end_test" && e.status === "FAIL");
+            function recomputeYAxis() {
+                const counts = Object.values(statusCounts);
+                const maxCount = Math.max(0, ...counts);
+                const newMax = Math.ceil((maxCount + 1) / 5) * 5 || 5;
+                chart.options.scales.y = {
+                    min: 0,
+                    max: newMax,
+                    ticks: { precision: 0, stepSize: 1 }
+                };
+            }
 
-            for (const fail of failures) {
+            function refreshChart() {
+                chart.data.datasets[0].data = [
+                    statusCounts.PASS,
+                    statusCounts.FAIL,
+                    statusCounts.SKIP
+                ];
+                recomputeYAxis();
+                chart.update();
+            }
+
+            // --- Fail table update (append-once per event id) ---
+            function appendFailureRow(evt) {
+                if (!evt || evt.event_type !== "end_test" || evt.status !== "FAIL") return;
+                if (evt.id != null && seenFailureIds.has(evt.id)) return;
+                if (evt.id != null) seenFailureIds.add(evt.id);
+
+                const tableBody = document.querySelector("#failTable tbody");
                 const row = document.createElement("tr");
 
                 const timeCell = document.createElement("td");
-                timeCell.textContent = fail.endtime || "(geen tijd)";
+                timeCell.textContent = evt.endtime || "(geen tijd)";
 
                 const nameCell = document.createElement("td");
-                nameCell.textContent = fail.name;
+                nameCell.textContent = evt.name || "(onbekend)";
 
                 const suiteCell = document.createElement("td");
-                suiteCell.textContent = fail.suite || "(onbekend)";
+                suiteCell.textContent = evt.suite || "(onbekend)";
 
                 const msgCell = document.createElement("td");
-                msgCell.textContent = fail.message || "(geen foutmelding)";
+                msgCell.textContent = evt.message || "(geen foutmelding)";
 
                 row.appendChild(timeCell);
                 row.appendChild(nameCell);
@@ -200,90 +268,175 @@
                 row.appendChild(msgCell);
                 tableBody.appendChild(row);
             }
-        }
 
-        async function initChart() {
-            const events = await fetchEvents();
-            const data = groupByStatus(events);
-
-            const ctx = document.getElementById("statusChart").getContext("2d");
-            chart = new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: Object.keys(data),
-                    datasets: [{
-                        label: "Aantal tests per status",
-                        data: Object.values(data),
-                        backgroundColor: ["green", "red", "gray"]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,  // <- cruciaal
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0,
-                                stepSize: 1
-                            }
-                        }
-                    }
+            // --- Log pane update ---
+            function appendLogMessage(line) {
+                const logContainer = document.getElementById("logMessages");
+                const div = document.createElement("div");
+                div.textContent = line;
+                logContainer.appendChild(div);
+                // Keep to a reasonable size
+                if (logContainer.childElementCount > 1000) {
+                    logContainer.removeChild(logContainer.firstChild);
                 }
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+
+            function formatLogRecord(rec) {
+                const date = rec.timestamp || rec.endtime || "";
+                const level = rec.level || "";
+                const type = rec.event_type || rec.type || "LOG";
+                const msg = rec.message || rec.msg || "";
+                return `${date} | ${level} | ${type} | ${msg}`;
+            }
+
+            // --- Handle incoming test events from SSE ---
+            function handleIncomingEvent(evt) {
+                if (!evt || !evt.event_type) return;
+
+                // Suite timing
+                if (evt.event_type === "start_suite") {
+                    if (evt.endtime) suiteStartTime = new Date(evt.endtime);
+                    else suiteStartTime = new Date();
+                    suiteEndTime = null;
+                    startElapsedTicker();
+                }
+                if (evt.event_type === "end_suite") {
+                    if (evt.endtime) suiteEndTime = new Date(evt.endtime);
+                    stopElapsedTicker();
+                }
+
+                // Counters on end_test
+                if (evt.event_type === "end_test") {
+                    const s = evt.status;
+                    if (s && (s === "PASS" || s === "FAIL" || s === "SKIP")) {
+                        statusCounts[s] = (statusCounts[s] || 0) + 1;
+                        refreshChart();
+                    }
+                    appendFailureRow(evt);
+                }
+            }
+
+            // --- SSE connections with auto-reconnect ---
+            function connectEventStream() {
+                if (eventsConnection) {
+                    eventsConnection.close();
+                }
+                
+                updateConnectionStatus('events', 'connecting');
+                
+                eventsConnection = new EventSource("/events/stream");
+                
+                eventsConnection.onopen = () => {
+                    updateConnectionStatus('events', 'connected');
+                    console.log("Events stream connected");
+                };
+
+                eventsConnection.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        handleIncomingEvent(data);
+                    } catch (err) {
+                        console.error("Invalid SSE event payload", err);
+                    }
+                };
+
+                eventsConnection.onerror = (err) => {
+                    console.error("SSE error on /events/stream", err);
+                    updateConnectionStatus('events', 'disconnected');
+                    
+                    // Auto-reconnect after 5 seconds
+                    setTimeout(() => {
+                        if (eventsConnection.readyState === EventSource.CLOSED) {
+                            connectEventStream();
+                        }
+                    }, 5000);
+                };
+            }
+
+            function connectAppLogStream() {
+                if (logsConnection) {
+                    logsConnection.close();
+                }
+                
+                updateConnectionStatus('logs', 'connecting');
+                
+                logsConnection = new EventSource("/applog/stream");
+                
+                logsConnection.onopen = () => {
+                    updateConnectionStatus('logs', 'connected');
+                    console.log("App logs stream connected");
+                };
+                
+                logsConnection.onmessage = (e) => {
+                    try {
+                        const rec = JSON.parse(e.data);
+                        appendLogMessage(formatLogRecord(rec));
+                    } catch (err) {
+                        console.error("Invalid applog SSE payload", err);
+                    }
+                };
+
+                logsConnection.onerror = (err) => {
+                    console.error("SSE error on /applog/stream", err);
+                    updateConnectionStatus('logs', 'disconnected');
+                    
+                    // Auto-reconnect after 5 seconds
+                    setTimeout(() => {
+                        if (logsConnection.readyState === EventSource.CLOSED) {
+                            connectAppLogStream();
+                        }
+                    }, 5000);
+                };
+            }
+
+            // --- Clear events (server endpoint should clear state and return 200) ---
+            async function clearEvents() {
+                try {
+                    const response = await fetch("/events/clear");
+                    if (response.ok) {
+                        // Reset local UI state after server clears its buffer
+                        statusCounts.PASS = 0;
+                        statusCounts.FAIL = 0;
+                        statusCounts.SKIP = 0;
+                        refreshChart();
+
+                        const tableBody = document.querySelector("#failTable tbody");
+                        tableBody.innerHTML = "";
+                        seenFailureIds.clear();
+
+                        const logContainer = document.getElementById("logMessages");
+                        logContainer.innerHTML = "";
+
+                        suiteStartTime = null;
+                        suiteEndTime = null;
+                        stopElapsedTicker();
+
+                        console.log("Events cleared");
+                    } else {
+                        console.error("Failed to clear events");
+                    }
+                } catch (err) {
+                    console.error("Error clearing events:", err);
+                }
+            }
+
+            // Expose clearEvents to button
+            window.clearEvents = clearEvents;
+
+            // --- Cleanup on page unload ---
+            window.addEventListener('beforeunload', () => {
+                if (eventsConnection) eventsConnection.close();
+                if (logsConnection) logsConnection.close();
             });
+
+            // --- Bootstrap ---
+            (function boot() {
+                initChart();
+                connectEventStream();
+                connectAppLogStream();
+            })();
         }
-
-        async function initLogContainer() {
-            const logContainer = document.getElementById("logMessages");
-            logContainer.innerHTML = "";  // Clear existing logs
-
-            const logs = await fetchAppLog();
-            for (const log of logs) {
-                const logEntry = document.createElement("div");
-                logEntry.textContent = log.message;
-                logContainer.appendChild(logEntry);
-            }
-        }
-
-        let suiteStartTime = null;
-        let suiteEndTime = null;
-
-        function extractSuiteendtimes(events) {
-            const startSuite = events.find(e => e.event_type === "start_suite");
-            const endSuite = events.find(e => e.event_type === "end_suite");
-
-            if (startSuite) suiteStartTime = new Date(startSuite.endtime);
-            if (endSuite) suiteEndTime = new Date(endSuite.endtime);
-        }
-
-        function updateElapsedTime() {
-            const display = document.getElementById("elapsed-display");
-            if (!suiteStartTime) {
-                display.textContent = "—";
-                return;
-            }
-
-            const now = suiteEndTime ? suiteEndTime : new Date();
-            const seconds = Math.floor((now - suiteStartTime) / 1000);
-            display.textContent = `${seconds}s`;
-        }
-
-        async function pollForUpdates() {
-            const events = await fetchEvents();
-            const grouped = groupByStatus(events);
-            const appLogs = await fetchAppLog();
-
-            updateChartData(grouped);
-            updateFailTable(events);
-            updateLogMessages(appLogs);
-
-            extractSuiteendtimes(events);
-            updateElapsedTime();
-        }
-
-        initChart();
-        initLogContainer();
-        setInterval(pollForUpdates, 1000);
     </script>
 </body>
 </html>

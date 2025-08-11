@@ -4,6 +4,7 @@ import logging
 
 router = APIRouter()
 logger = logging.getLogger("rt.api.ingest")
+import httpx
 
 # Dispatch maps per endpoint
 def get_dispatch_maps(event_sink):
@@ -60,6 +61,9 @@ async def handle_event_request(request: Request, endpoint_name: str, allow_fallb
     if not event_type:
         return JSONResponse(content={"error": f"Missing event_type for /{endpoint_name}"}, status_code=400)
 
+    # Always set tenant_id to "default"
+    event["tenant_id"] = "default"
+
     try:
         if event_type in allowed_types:
             handler = get_handler_by_event_type(event_type, event_sink)
@@ -71,6 +75,19 @@ async def handle_event_request(request: Request, endpoint_name: str, allow_fallb
 
         if handler:
             await handler(event)
+
+            VIEWER_BASE = "http://localhost:8002" 
+            tenant_id = "default"
+
+            if endpoint_name == "log":
+                async with httpx.AsyncClient(timeout=5) as client:
+                    await client.post(f"{VIEWER_BASE}/applog/broadcast",
+                                    json={"tenant_id": tenant_id, **event})
+            elif endpoint_name in ("event", "event/log_message"):
+                async with httpx.AsyncClient(timeout=5) as client:
+                    await client.post(f"{VIEWER_BASE}/events/broadcast",
+                                    json={"tenant_id": tenant_id, **event})
+
         else:
             logger.error(f"No handler for event_type={event_type}")
             return JSONResponse(content={"error": "No handler found"}, status_code=500)

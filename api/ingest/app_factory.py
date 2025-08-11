@@ -1,9 +1,12 @@
 from fastapi import FastAPI
+from api.viewer.event_manager import EventManager
 from shared.helpers.config_loader import load_config
 from shared.helpers.logger import setup_root_logging
 from api.ingest.sinks import BaseIngestSink, AsyncSqliteSink, AsyncPostgresSink
 from api.ingest.routes import router as ingest_routes
 from contextlib import asynccontextmanager
+
+from shared.middleware.tenant_middleware import TenantMiddleware
 
 # Load configuration and setup root logging
 config = load_config()
@@ -49,4 +52,7 @@ def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
     app.include_router(ingest_routes)
     app.state.event_sink = event_sink
+    app.state.event_manager = EventManager()
+    app.add_middleware(TenantMiddleware)
+
     return app
