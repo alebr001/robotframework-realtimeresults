@@ -32,7 +32,7 @@ services:
     networks:
       - realtime_net
     restart: unless-stopped
-    image: robotframework-realtimeresults-ingest-api
+    image: ghcr.io/alebr001/robotframework-realtimeresults-ingest-api
 
   viewer-api:
     build:
@@ -50,7 +50,7 @@ services:
     networks:
       - realtime_net
     restart: unless-stopped
-    image: robotframework-realtimeresults-viewer-api
+    image: ghcr.io/alebr001/robotframework-realtimeresults-viewer-api
 
   # dashboard:
   #   image: nginx:stable-alpine
