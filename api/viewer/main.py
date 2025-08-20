@@ -13,6 +13,7 @@ from api.viewer import routes as viewer_routes
 from fastapi.middleware.cors import CORSMiddleware
 
 config = load_config()
+# Ensure database schema is up-to-date
 ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
 setup_root_logging(config.get("log_level", "info"))
 logger = logging.getLogger("rt.api.viewer")
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
     logger.info("Dashboard available at: /dashboard")
     yield
     logger.info("Shutting down Viewer API")
+
 
 app = FastAPI(lifespan=lifespan)
 

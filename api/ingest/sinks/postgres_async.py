@@ -21,6 +21,7 @@ class AsyncPostgresSink(BaseIngestSink):
     # call from ingest main.py to initialize the database schema
     async def initialize_database(self):
         try:
+            # Ensure database schema is up-to-date
             await async_ensure_schema(self.database_url)
             # Create connection pool AFTER schema is initialized
             self.pool = await asyncpg.create_pool(

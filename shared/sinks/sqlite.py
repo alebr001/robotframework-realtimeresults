@@ -30,6 +30,7 @@ class SqliteSink(EventSink):
     def _initialize_database(self):
         self.logger.info("Ensuring tables in %s exist", self.database_url)
         try:
+            # Ensure database schema is up-to-date
             ensure_schema(self.database_url)
         except Exception as e:
             self.logger.warning("[SQLITE_SYNC] DB init failed: %s", e)
