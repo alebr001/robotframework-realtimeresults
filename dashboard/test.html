@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>RealtimeResults Dashboard</title>
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Algemeen layout en typografie */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #444;
+        }
+
+        button {
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Samenvatting kaarten */
+        #summary {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-card {
+            flex: 1;
+            background-color: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .summary-card .count {
+            margin-top: 0.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        /* voortgangsbalk */
+        .progress-bar {
+            background: #e6e9ef;
+            border-radius: 4px;
+            height: 10px;
+            width: 100%;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress {
+            background: #28a745;
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Container voor grafiek en logberichten */
+        #dashboard-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        #chartContainer {
+            flex: 1;
+            height: 300px;
+            background-color: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        #logContainer {
+            flex: 1;
+            background-color: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #logMessages {
+            white-space: pre-line;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Tabel voor fouten */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: #fff;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>RealtimeResults Dashboard</h1>
+    <h2>Realtime Testoverzicht</h2>
+
+    <!-- Samenvatting van teststatussen -->
+    <div id="summary">
+        <div class="summary-card" id="pass-card">
+            <h3>Geslaagd</h3>
+            <div class="count" id="pass-count">0</div>
+        </div>
+        <div class="summary-card" id="fail-card">
+            <h3>Gefaald</h3>
+            <div class="count" id="fail-count">0</div>
+        </div>
+        <div class="summary-card" id="skip-card">
+            <h3>Overgeslagen</h3>
+            <div class="count" id="skip-count">0</div>
+        </div>
+    </div>
+    <!-- Voortgangsbalk: proportie geslaagde tests -->
+    <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- Totale tijd -->
+    <p><strong>Totale tijd:</strong> <span id="elapsed-display">—</span></p>
+
+    <!-- Knop om events te wissen -->
+    <button onclick="clearEvents()">Verwijder events</button>
+
+    <!-- Container voor grafieken en logberichten -->
+    <div id="dashboard-container">
+        <!-- Hoofdchart voor teststatussen -->
+        <div id="chartContainer">
+            <canvas id="statusChart"></canvas>
+        </div>
+        <!-- Logweergave met zoekmogelijkheid -->
+        <div id="logContainer">
+            <h3>Logberichten</h3>
+            <input type="text" id="logSearch" placeholder="Zoek logberichten..." oninput="filterLogs()" style="width:100%;margin-bottom:0.5rem;padding:0.5rem;border:1px solid #ccc;border-radius:4px;">
+            <div id="logMessages"></div>
+        </div>
+    </div>
+
+    <!-- Extra grafiek voor metrics -->
+    <div id="extraCharts" style="margin-top:2rem;">
+        <div id="metricChartContainer" style="background-color:#fff;padding:1rem;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);width:100%;height:250px;">
+            <h3>Metric trends</h3>
+            <canvas id="metricChart" style="height:200px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Tabel met mislukte tests -->
+    <h3 style="margin-top:2rem;">Mislukte tests</h3>
+    <table id="failTable">
+        <thead>
+            <tr>
+                <th>Tijdstip</th>
+                <th>Testcase</th>
+                <th>Suite</th>
+                <th>Foutmelding</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- rijen worden dynamisch toegevoegd -->
+        </tbody>
+    </table>
+
+    <script>
+        let chart;
+        // Extra grafieken voor metrics en logniveau
+        let metricChart;
+        let logLevelChart;
+        // Volledige lijst van logberichten voor zoekfunctie
+        let allLogs = [];
+
+        /**
+         * Stuur een HTTP GET naar het /events/clear-endpoint om events te verwijderen.
+         */
+        async function clearEvents() {
+            const response = await fetch("/events/clear");
+            if (response.ok) {
+                console.log("Events verwijderd");
+                await pollForUpdates();
+            } else {
+                console.error("Kon events niet verwijderen");
+            }
+        }
+
+        /**
+         * Ophalen van events en application logs
+         */
+        async function fetchEvents() {
+            const response = await fetch("/events");
+            return await response.json();
+        }
+        async function fetchAppLog() {
+            const response = await fetch("/applog");
+            return await response.json();
+        }
+
+        /**
+         * Groepeer events op status van testcases.
+         */
+        function groupByStatus(events) {
+            const counts = { PASS: 0, FAIL: 0, SKIP: 0 };
+            for (const e of events) {
+                if (e.event_type === "end_test") {
+                    counts[e.status] = (counts[e.status] || 0) + 1;
+                }
+            }
+            return counts;
+        }
+
+        /**
+         * Update de Chart.js grafiek op basis van de nieuwe aantallen.
+         */
+        function updateChartData(counts) {
+            const values = Object.values(counts);
+            const maxCount = Math.max(...values, 1);
+            const newMax = Math.ceil((maxCount + 1) / 5) * 5;
+
+            chart.data.labels = Object.keys(counts);
+            chart.data.datasets[0].data = values;
+            chart.options.scales.y.max = newMax;
+            chart.update();
+        }
+
+        /**
+         * Update samenvatting kaarten en voortgangsbalk.
+         */
+        function updateSummary(counts) {
+            document.getElementById('pass-count').textContent = counts.PASS;
+            document.getElementById('fail-count').textContent = counts.FAIL;
+            document.getElementById('skip-count').textContent = counts.SKIP;
+            const total = counts.PASS + counts.FAIL + counts.SKIP;
+            const progress = total > 0 ? (counts.PASS / total) * 100 : 0;
+            document.getElementById('progress').style.width = progress + '%';
+            // kleur progress naar rood/oranje/groen op basis van falingsratio
+            const progressEl = document.getElementById('progress');
+            if (progress > 80) {
+                progressEl.style.background = '#28a745';
+            } else if (progress > 50) {
+                progressEl.style.background = '#ffc107';
+            } else {
+                progressEl.style.background = '#dc3545';
+            }
+        }
+
+        /**
+         * Vul de tabel met mislukte tests.
+         */
+        function updateFailTable(events) {
+            const tableBody = document.querySelector('#failTable tbody');
+            tableBody.innerHTML = '';
+            const failures = events.filter(e => e.event_type === 'end_test' && e.status === 'FAIL');
+            for (const fail of failures) {
+                const row = document.createElement('tr');
+                const timeCell = document.createElement('td');
+                timeCell.textContent = fail.endtime || '(geen tijd)';
+                const nameCell = document.createElement('td');
+                nameCell.textContent = fail.name;
+                const suiteCell = document.createElement('td');
+                suiteCell.textContent = fail.suite || '(onbekend)';
+                const msgCell = document.createElement('td');
+                msgCell.textContent = fail.message || '(geen foutmelding)';
+                row.appendChild(timeCell);
+                row.appendChild(nameCell);
+                row.appendChild(suiteCell);
+                row.appendChild(msgCell);
+                tableBody.appendChild(row);
+            }
+        }
+
+        /**
+         * Update de logberichten in het logpaneel.
+         */
+        function updateLogMessages(logEvents) {
+            // Bewaar alle logregels zodat er gefilterd kan worden
+            allLogs = logEvents.map(l => l.message);
+            renderLogs();
+        }
+
+        /**
+         * Toon logberichten die overeenkomen met het zoekfilter
+         */
+        function renderLogs() {
+            const container = document.getElementById('logMessages');
+            container.innerHTML = '';
+            const query = document.getElementById('logSearch').value.toLowerCase();
+            const filtered = allLogs.filter(msg => msg.toLowerCase().includes(query));
+            for (const msg of filtered) {
+                const entry = document.createElement('div');
+                entry.textContent = msg;
+                container.appendChild(entry);
+            }
+        }
+
+        /**
+         * Filter logs bij wijzigen van zoekveld
+         */
+        function filterLogs() {
+            renderLogs();
+        }
+
+        /**
+         * Update de logniveau-grafiek op basis van logEvents
+         */
+        function updateLogLevelChart(logEvents) {
+            // tel aantal regels per level (INFO, WARNING, ERROR)
+            const counts = { INFO: 0, WARNING: 0, ERROR: 0 };
+            for (const log of logEvents) {
+                const level = log.level || 'INFO';
+                if (counts[level] !== undefined) counts[level]++;
+            }
+            const labels = Object.keys(counts);
+            const values = Object.values(counts);
+            if (!logLevelChart) {
+                const ctx = document.getElementById('logLevelChart').getContext('2d');
+                logLevelChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Aantal logregels per level',
+                            data: values,
+                            backgroundColor: ['#17a2b8', '#ffc107', '#dc3545']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } }
+                        }
+                    }
+                });
+            } else {
+                logLevelChart.data.labels = labels;
+                logLevelChart.data.datasets[0].data = values;
+                logLevelChart.update();
+            }
+        }
+
+        /**
+         * Update metric-grafiek op basis van events
+         * We gaan er vanuit dat metric-events een veld 'metric_name' en 'value' hebben.
+         */
+        function updateMetricChart(events) {
+            // groepeer per metric_name en toon de laatste waarde
+            const metricData = {};
+            for (const e of events) {
+                if (e.event_type === 'metric') {
+                    const name = e.metric_name || 'metric';
+                    metricData[name] = e.value;
+                }
+            }
+            const labels = Object.keys(metricData);
+            const values = Object.values(metricData);
+            // bepaal dynamisch maximum voor y-as
+            const maxVal = values.length > 0 ? Math.max(...values, 1) : 1;
+            const newMax = Math.ceil((maxVal + 1) / 5) * 5;
+            if (!metricChart) {
+                const ctx = document.getElementById('metricChart').getContext('2d');
+                metricChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Laatste metricwaarde',
+                            data: values,
+                            backgroundColor: '#6f42c1'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: newMax, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            } else {
+                metricChart.data.labels = labels;
+                metricChart.data.datasets[0].data = values;
+                metricChart.options.scales.y.max = newMax;
+                metricChart.update();
+            }
+        }
+
+        // Variabelen voor bijhouden van start- en eindtijd van suites
+        let suiteStartTime = null;
+        let suiteEndTime = null;
+
+        function extractSuiteTimes(events) {
+            const startSuite = events.find(e => e.event_type === 'start_suite');
+            const endSuite = events.find(e => e.event_type === 'end_suite');
+            if (startSuite) suiteStartTime = new Date(startSuite.endtime);
+            if (endSuite) suiteEndTime = new Date(endSuite.endtime);
+        }
+
+        function updateElapsedTime() {
+            const display = document.getElementById('elapsed-display');
+            if (!suiteStartTime) {
+                display.textContent = '—';
+                return;
+            }
+            const now = suiteEndTime ? suiteEndTime : new Date();
+            const seconds = Math.floor((now - suiteStartTime) / 1000);
+            display.textContent = `${seconds}s`;
+        }
+
+        /**
+         * Haal events en logs op en werk UI-elementen bij.
+         */
+        async function pollForUpdates() {
+            const events = await fetchEvents();
+            const counts = groupByStatus(events);
+            const logs = await fetchAppLog();
+            updateChartData(counts);
+            updateSummary(counts);
+            updateFailTable(events);
+            updateLogMessages(logs); // deze functie update ook logniveau-grafiek en renderLogs
+            updateMetricChart(events);
+            extractSuiteTimes(events);
+            updateElapsedTime();
+        }
+
+        /**
+         * Initialiseert de grafiek en vult beginwaarden.
+         */
+        async function initDashboard() {
+            const initialEvents = await fetchEvents();
+            const counts = groupByStatus(initialEvents);
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(counts),
+                    datasets: [{
+                        label: 'Aantal tests per status',
+                        data: Object.values(counts),
+                        backgroundColor: ['#28a745', '#dc3545', '#6c757d']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+            updateSummary(counts);
+            // Vul log en fouttabel met initiële waarden
+            const logs = await fetchAppLog();
+            updateFailTable(initialEvents);
+            updateLogMessages(logs); // updateLogMessages initialiseert ook de logniveau-grafiek
+            updateMetricChart(initialEvents);
+            extractSuiteTimes(initialEvents);
+            updateElapsedTime();
+        }
+
+        // Initialisatie en periodieke updates
+        initDashboard();
+        setInterval(pollForUpdates, 1000);
+    </script>
+</body>
+</html>
