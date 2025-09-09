@@ -125,7 +125,7 @@ class RealTimeResults:
             suite = ".".join(data.longname.split(".")[:-1]),
             status=str(result.status),
             message=str(result.message),
-            elapsed = result.elapsedtime / 1000 if hasattr(data, "elapsedtime") else None,
+            elapsed = result.elapsedtime / 1000 if hasattr(result, "elapsedtime") else None,
             tags=[str(tag) for tag in data.tags]
         )
         self.current_test_id = None

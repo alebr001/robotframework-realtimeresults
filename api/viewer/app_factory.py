@@ -15,8 +15,6 @@ from api.viewer.event_manager import EventManager
 from api.viewer import routes as viewer_routes
 from shared.middleware.tenant_middleware import TenantMiddleware
 
-
-
 ALLOWED_ORIGINS = "*"
 
 def _mount_dashboard(app: FastAPI) -> None:
@@ -74,9 +72,7 @@ def create_app(config: dict) -> FastAPI:
         allow_origins = [url] 
     else:
         allow_origins = ALLOWED_ORIGINS
-
-
-    allow_origins = [str(config.get("ingest_client_host")":")] or ALLOWED_ORIGINS
+    
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allow_origins,
