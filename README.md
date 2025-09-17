@@ -217,8 +217,8 @@ rt-robot --config config.json tests/
   "_comment2": "use this to connect to the services",
   "ingest_client_host": "127.0.0.1",
   "ingest_client_port": 8001,
-  "viewer_client_host": "0.0.0.0",
-  "viewer_client_port": 8002,
+  "viewer_container_host": "0.0.0.0",
+  "viewer_container_port": 8002,
 
   "source_log_tails": [
       {
