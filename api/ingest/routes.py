@@ -2,9 +2,13 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import logging
 
+from shared.helpers.config_loader import load_config
+
 router = APIRouter()
 logger = logging.getLogger("rt.api.ingest")
 import httpx
+
+config = load_config()
 
 # Dispatch maps per endpoint
 def get_dispatch_maps(event_sink):
@@ -76,7 +80,9 @@ async def handle_event_request(request: Request, endpoint_name: str, allow_fallb
         if handler:
             await handler(event)
 
-            VIEWER_BASE = "http://localhost:8002" 
+            VIEWER_URL = config.get("viewer_container_host", "0.0.0.0")
+            VIEWER_PORT = config.get("viewer_container_port", "8002")
+            VIEWER_BASE = f"http://{VIEWER_URL}:{VIEWER_PORT}"          
             tenant_id = "default"
 
             if endpoint_name == "log":

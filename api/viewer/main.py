@@ -62,4 +62,3 @@ else:
 
 app.state.event_reader = event_reader
 app.state.event_manager = EventManager()
-
