@@ -46,7 +46,7 @@ def load_config(path: Union[str, Path, None] = None, override_with_env: bool = T
         KNOWN_CONFIG_KEYS = [
             "listener_sink_type", "database_url",
             "viewer_backend_host", "viewer_backend_port",
-            "viewer_client_host", "viewer_client_port",
+            "viewer_container_host", "viewer_container_port",
             "ingest_backend_host", "ingest_backend_port", 
             "ingest_client_host", "ingest_client_port", 
             "enable_autoservices", "log_level", "log_level_cli", 

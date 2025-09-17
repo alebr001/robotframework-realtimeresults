@@ -250,7 +250,7 @@ def main():
         pids = {}
 
     logger.debug(f"Viewer Backend: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
-    logger.debug(f"Viewer CLient: http://{config.get('viewer_client_host', '127.0.0.1')}:{config.get('viewer_client_port', 8002)}")
+    logger.debug(f"Viewer Client: http://{config.get('viewer_container_host', '127.0.0.1')}:{config.get('viewer_container_port', 8002)}")
     logger.debug(f"Ingest Backend: http://{config.get('ingest_backend_host', '127.0.0.1')}:{config.get('ingest_backend_port', 8001)}")
     logger.debug(f"Ingest Client: http://{config.get('ingest_client_host', '127.0.0.1')}:{config.get('ingest_client_port', 8001)}")
     logger.debug(f"Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")

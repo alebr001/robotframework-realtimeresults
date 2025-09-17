@@ -101,7 +101,6 @@ async def stream_app_logs(
         }
     )
 
-
 @router.post("/events/broadcast")
 async def broadcast_event(
     request: Request,
