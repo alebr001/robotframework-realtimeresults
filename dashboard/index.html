@@ -1046,16 +1046,18 @@
         ////////////////////////////////
 
         async function setup_first_data() {
-            const events = await fetchEvents();
-            const grouped = groupByStatus(events);
-            const appLogs = await fetchAppLog();
+            const events = await fetch_events();
+            const grouped = group_by_status(events);
+            const logs = await fetch_logs();
+            const metrics = await fetch_metrics();
 
             window.rtDashboardState = {
                 statusCounts: grouped,
                 suiteStartTime: null,
                 suiteEndTime: null,
                 failures: events,
-                logs: appLogs,
+                logs: logs,
+                metrics: metrics,
             };
 
             setup_data_and_items();
@@ -1072,32 +1074,41 @@
         async function poll_for_updates() {
             // window.rtDashboardState.appLogs[-1].id
 
-            const events = await fetchEvents();
-            const grouped = groupByStatus(events);
-            const appLogs = await fetchAppLog();
+            const events = await fetch_events();
+            const grouped = group_by_status(events);
+            const logs = await fetch_logs();
+            const metrics = await fetch_metrics();
 
             window.rtDashboardState = {
                 statusCounts: grouped,
                 suiteStartTime: null,
                 suiteEndTime: null,
                 failures: events,
-                logs: appLogs,
+                logs: logs,
+                metrics: metrics,
             };
+
+            console.log(window.rtDashboardState)
 
             update_charts();
         }
 
-        async function fetchEvents() {
+        async function fetch_events() {
             const response = await fetch("/events");
             return await response.json();
         }
 
-        async function fetchAppLog() {
-            const response = await fetch("/applog");
+        async function fetch_logs() {
+            const response = await fetch("/logs");
             return await response.json();
         }
 
-        function groupByStatus(events) {
+        async function fetch_metrics() {
+            const response = await fetch("/metrics");
+            return await response.json();
+        }
+
+        function group_by_status(events) {
             const counts = { PASS: 0, FAIL: 0, SKIP: 0 };
             for (const e of events) {
                 if (e.event_type === "end_test") {
@@ -2338,7 +2349,6 @@
             });
 
             const sections = Object.keys(sectionMap).map(id => document.getElementById(id));
-            console.log(sections)
             function update_active_section() {
                 const viewportHeight = window.innerHeight;
                 const viewportTop = viewportHeight * 0.2;
