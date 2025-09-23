@@ -15,7 +15,7 @@ from shared.helpers.logger import setup_root_logging
 from shared.helpers.config_loader import load_config
 from shared.sinks.http import AsyncHttpSink
 
-INTERVAL = 60  # seconds
+INTERVAL = 3  # seconds
 HOSTNAME = socket.gethostname()
 
 config = load_config()
