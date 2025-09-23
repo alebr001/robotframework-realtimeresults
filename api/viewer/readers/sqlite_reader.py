@@ -54,3 +54,24 @@ class SqliteReader(Reader):
         finally:
             if should_close:
                 conn.close()
+
+    def _clear_logs(self) -> None:
+        conn, should_close = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql_definitions.DELETE_ALL_RF_LOGS)
+            cursor.execute(sql_definitions.DELETE_ALL_APP_LOGS)
+            conn.commit()
+        finally:
+            if should_close:
+                conn.close()
+    
+    def _clear_metrics(self) -> None:
+        conn, should_close = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql_definitions.DELETE_ALL_METRICS)
+            conn.commit()
+        finally:
+            if should_close:
+                conn.close()

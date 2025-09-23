@@ -10,9 +10,24 @@ logger = logging.getLogger("rt.api.viewer")
 def get_event_reader(request: Request):
     return request.app.state.event_reader
 
-@router.get("/applog")
+@router.get("/logs")
 def get_applog(reader = Depends(get_event_reader)):
-    return reader.get_app_logs()
+    # combine app logs and RF logs
+    logs = reader.get_app_logs()
+    logs.append(reader.get_rf_logs())
+    return logs
+
+@router.get("/logs/clear")
+def clear_log(reader = Depends(get_event_reader)):
+    logger.debug("Initiating clear_logs() via GET /logs/clear")
+    try:
+        reader.clear_logs()
+        logger.info("Successfully cleared all logs using %s", reader.__class__.__name__)
+    except Exception as e:
+        logger.error("Failed to clear logs: %s", str(e))
+        raise
+
+    return RedirectResponse(url="/logs", status_code=303)
 
 @router.get("/events")
 def get_events(reader = Depends(get_event_reader)):
@@ -21,15 +36,29 @@ def get_events(reader = Depends(get_event_reader)):
 @router.get("/events/clear")
 def clear_events(reader = Depends(get_event_reader)):
     logger.debug("Initiating clear_events() via GET /events/clear")
-
     try:
         reader.clear_events()
         logger.info("Successfully cleared all events using %s", reader.__class__.__name__)
     except Exception as e:
         logger.error("Failed to clear events: %s", str(e))
         raise
-
     return RedirectResponse(url="/events", status_code=303)
+
+@router.get("/metrics")
+def get_metrics(reader = Depends(get_event_reader)):
+    return reader.get_metrics()
+
+@router.get("/metrics/clear")
+def clear_metrics(reader = Depends(get_event_reader)):
+    logger.debug("Initiating clear_metrics() via GET /metrics/clear")
+    try:
+        reader.clear_metrics()
+        logger.info("Successfully cleared all metrics using %s", reader.__class__.__name__)
+    except Exception as e:
+        logger.error("Failed to clear metrics: %s", str(e))
+        raise
+
+    return RedirectResponse(url="/metrics", status_code=303)
 
 @router.get("/elapsed")
 def get_elapsed_time(reader = Depends(get_event_reader)):

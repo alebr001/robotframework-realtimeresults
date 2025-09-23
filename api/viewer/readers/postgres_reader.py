@@ -32,8 +32,11 @@ class PostgresReader(Reader):
             with conn.cursor() as cursor:
                 cursor.execute(query)
                 rows = cursor.fetchall()
-                columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, row)) for row in rows]
+                if cursor.description is not None:
+                    columns = [desc[0] for desc in cursor.description]
+                    return [dict(zip(columns, row)) for row in rows]
+                else:
+                    return []
         finally:
             if should_close:
                 conn.close()
@@ -49,6 +52,27 @@ class PostgresReader(Reader):
         try:
             with conn.cursor() as cursor:
                 cursor.execute(sql_definitions.DELETE_ALL_EVENTS)
+                conn.commit()
+        finally:
+            if should_close:
+                conn.close()
+
+    def _clear_logs(self) -> None:
+        conn, should_close = self._get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_definitions.DELETE_ALL_RF_LOGS)
+                cursor.execute(sql_definitions.DELETE_ALL_APP_LOGS)
+                conn.commit()
+        finally:
+            if should_close:
+                conn.close()
+
+    def _clear_metrics(self) -> None:
+        conn, should_close = self._get_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_definitions.DELETE_ALL_METRICS)
                 conn.commit()
         finally:
             if should_close:
