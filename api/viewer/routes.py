@@ -11,7 +11,7 @@ def get_event_reader(request: Request):
     return request.app.state.event_reader
 
 @router.get("/logs")
-def get_applog(reader = Depends(get_event_reader)):
+def get_logs(reader = Depends(get_event_reader)):
     # combine app logs and RF logs
     logs = reader.get_app_logs()
     logs.append(reader.get_rf_logs())
