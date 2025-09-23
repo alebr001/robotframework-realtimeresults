@@ -1,4 +1,4 @@
-# backend/event_reader.py
+# backend/base_reader.py
 
 from abc import ABC, abstractmethod
 from typing import List, Dict
@@ -16,6 +16,14 @@ class Reader(ABC):
     def get_app_logs(self):
         self.logger.debug("Clearing events using %s", self.__class__.__name__)
         return self._get_app_logs()
+    
+    def get_rf_logs(self):
+        self.logger.debug("Clearing events using %s", self.__class__.__name__)
+        return self._get_rf_logs()
+    
+    def get_metrics(self):
+        self.logger.debug("Clearing events using %s", self.__class__.__name__)
+        return self._get_metrics()
     
     def clear_events(self):
         self.logger.debug("Clearing events using %s", self.__class__.__name__)
@@ -36,6 +44,16 @@ class Reader(ABC):
 
     @abstractmethod
     def _get_app_logs(self) -> List[Dict]:
+        """Internal method implemented by subclass"""
+        pass
+
+    @abstractmethod
+    def _get_rf_logs(self) -> List[Dict]:
+        """Internal method implemented by subclass"""
+        pass
+
+    @abstractmethod
+    def _get_metrics(self) -> List[Dict]:
         """Internal method implemented by subclass"""
         pass
 
