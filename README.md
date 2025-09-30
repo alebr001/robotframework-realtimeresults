@@ -65,11 +65,11 @@
 ### 4. Backend APIs
 
 - **Viewer API**: Serves dashboard, test events, and application logs.
-  - Endpoints: `/events`, `/applog`, `/events/clear`, `/dashboard`
+  - Endpoints: `/events`, `/logs`, `/events/clear`, `/dashboard`
   - See [`api/viewer/main.py`](api/viewer/main.py)
 - * **Ingest API**: Accepts incoming logs, metrics, and test events.
 
-  * Endpoints: `/log`, `/metric`, `/event`, `/event/log_message`
+  * Endpoints: `/logs`, `/metric`, `/event`, `/event/log_message`
   - See [`api/ingest/main.py`](api/ingest/main.py)
 
 ### 5. Dashboard
@@ -246,7 +246,7 @@ rt-robot --config config.json tests/
 ### Viewer API
 
 * `GET /events`
-* `GET /applog`
+* `GET /logs`
 * `GET /events/clear`
 * `GET /dashboard`
 
