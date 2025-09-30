@@ -493,10 +493,10 @@
             <a class="nav-item nav-link" id="menuLogs">Logs</a>
         </div>
         <ul class="navbar-nav flex-row flex-wrap ms-md-auto me-4">
-            <li class="nav-item">
+            <!-- <li class="nav-item">
                 <a class="nav-link p-2 information" id="filters" data-bs-toggle="modal"
                     data-bs-target="#filtersModal"></a>
-            </li>
+            </li> -->
             <li class="nav-item">
                 <a class="nav-link p-2 information" id="customizeLayout"></a>
             </li>
@@ -541,6 +541,10 @@
                         <div class="col">
                             <h4 id="dashboardTitle">Dashboard</h4>
                         </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-outline-light btn-sm mt-auto ms-3"
+                                data-bs-dismiss="modal" id="removeDashboardData">Remove Dashboard Data</button>
+                        </div>
                     </div>
                 </div>
                 <div id="dashboardDataHidden" hidden></div>
@@ -555,6 +559,10 @@
                         <div class="col">
                             <h4 id="metricsTitle">Metrics</h4>
                         </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-outline-light btn-sm mt-auto ms-3"
+                                data-bs-dismiss="modal" id="removeMetricsData">Remove Metrics Data</button>
+                        </div>
                     </div>
                 </div>
                 <div id="metricsDataHidden" hidden></div>
@@ -568,6 +576,10 @@
                     <div class="row">
                         <div class="col">
                             <h4 id="logsTitle">Logs</h4>
+                        </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-outline-light btn-sm mt-auto ms-3"
+                                data-bs-dismiss="modal" id="removeLogsData">Remove Logs Data</button>
                         </div>
                     </div>
                 </div>
@@ -678,6 +690,21 @@
                                 <p><i>Press "Close" or click next to the modal to save the graph settings</i></p>
                                 <div class="row">
                                     <div class="col-8 btn-group ms-1">
+                                        <label class="form-check-label mt-1" for="togglePollingInterval">Polling
+                                            Interval (s)</label>
+                                    </div>
+                                    <div class="col-2 ps-0 mt-1">
+                                        <select class="form-select form-select-sm" id="togglePollingInterval">
+                                            <option value="1">1</option>
+                                            <option value="5">5</option>
+                                            <option value="30">30</option>
+                                            <option value="60">60</option>
+                                            <option value="300">300</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-8 btn-group ms-1">
                                         <label class="form-check-label mt-1" for="toggleLegends">Display
                                             Legends</label>
                                     </div>
@@ -698,52 +725,12 @@
                                 </div>
                                 <div class="row">
                                     <div class="col-8 btn-group ms-1">
-                                        <label class="form-check-label mt-1" for="toggleLabels">Display Run
-                                            Start/Alias Labels On Axes</label>
-                                    </div>
-                                    <div class="col btn-group form-switch ms-2">
-                                        <input class="form-check-input mt-2" type="checkbox" role="switch"
-                                            id="toggleLabels" />
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-8 btn-group ms-1">
-                                        <label class="form-check-label mt-1" for="toggleAliases">Display Alias
-                                            Labels (Defaults to Run Start Labels)</label>
-                                    </div>
-                                    <div class="col btn-group form-switch ms-2">
-                                        <input class="form-check-input mt-2" type="checkbox" role="switch"
-                                            id="toggleAliases" />
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-8 btn-group ms-1">
-                                        <label class="form-check-label mt-1" for="toggleMilliseconds">Display
-                                            Milliseconds Run Start Labels</label>
-                                    </div>
-                                    <div class="col btn-group form-switch ms-2">
-                                        <input class="form-check-input mt-2" type="checkbox" role="switch"
-                                            id="toggleMilliseconds" />
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-8 btn-group ms-1">
                                         <label class="form-check-label mt-1" for="toggleAnimations">Display Drawing
                                             Animations</label>
                                     </div>
                                     <div class="col btn-group form-switch ms-2">
                                         <input class="form-check-input mt-2" type="checkbox" role="switch"
                                             id="toggleAnimations" />
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-8 btn-group ms-1">
-                                        <label class="form-check-label mt-1" for="toggleAnimationDuration">Animation
-                                            Duration (Milliseconds)</label>
-                                    </div>
-                                    <div class="col-2 ps-0 mt-1">
-                                        <input class="form-control form-control-sm" type="number"
-                                            id="toggleAnimationDuration" />
                                     </div>
                                 </div>
                                 <div class="row">
@@ -759,16 +746,6 @@
                                             <option value="6">6</option>
                                             <option value="8">8</option>
                                         </select>
-                                    </div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-8 btn-group ms-1">
-                                        <label class="form-check-label mt-1" for="toggleTimezone">Use Local
-                                            Timezone For Run_Starts</label>
-                                    </div>
-                                    <div class="col btn-group form-switch ms-2">
-                                        <input class="form-check-input mt-2" type="checkbox" role="switch"
-                                            id="toggleTimezone" />
                                     </div>
                                 </div>
                             </div>
@@ -869,7 +846,7 @@
 
         const informationMap = {
             "rflogo": "Robot Framework",
-            "filters": "Filters",
+            // "filters": "Filters",
             "customizeLayout": "Customize Layout",
             "saveLayout": "Save Layout",
             "settings": "Settings",
@@ -878,8 +855,8 @@
             "versionInformation": 'Realtimeresults 0.21.0',
             "bug": "Report a bug or request a feature",
             "github": "Github",
-            "amount": "Amount of runs that are shown. Only the most recent x runs are shown after applying the other filters.",
-            "amountLabel": "Amount of runs that are shown. Only the most recent x runs are shown after applying the other filters.",
+            // "amount": "Amount of runs that are shown. Only the most recent x runs are shown after applying the other filters.",
+            // "amountLabel": "Amount of runs that are shown. Only the most recent x runs are shown after applying the other filters.",
         }
 
         var gridDashboard
@@ -1003,16 +980,11 @@
 
         var settings = {
             show: {
-                dateLabels: true,
                 legends: true,
-                aliases: false,
-                milliseconds: false,
                 axisTitles: true,
                 animation: true,
-                duration: 1500,
                 rounding: 6,
-                timezone: false,
-                pollingInterval: 1000,
+                pollingInterval: 1,
             },
             view: {
                 dashboard: {
@@ -1068,12 +1040,10 @@
             if (pollingIntervalId !== null) {
                 clearInterval(pollingIntervalId);
             }
-            pollingIntervalId = setInterval(poll_for_updates, settings.show.pollingInterval);
+            pollingIntervalId = setInterval(poll_for_updates, settings.show.pollingInterval * 1000);
         }
 
         async function poll_for_updates() {
-            // window.rtDashboardState.appLogs[-1].id
-
             const events = await fetch_events();
             const grouped = group_by_status(events);
             const logs = await fetch_logs();
@@ -1087,8 +1057,6 @@
                 logs: logs,
                 metrics: metrics,
             };
-
-            console.log(window.rtDashboardState)
 
             update_charts();
         }
@@ -1105,6 +1073,21 @@
 
         async function fetch_metrics() {
             const response = await fetch("/metrics");
+            return await response.json();
+        }
+
+        async function clear_events() {
+            const response = await fetch("/events/clear");
+            return await response.json();
+        }
+
+        async function clear_logs() {
+            const response = await fetch("/logs/clear");
+            return await response.json();
+        }
+
+        async function clear_metrics() {
+            const response = await fetch("/metrics/clear");
             return await response.json();
         }
 
@@ -1182,8 +1165,9 @@
         function setup_settings_modal() {
             // function to catch the closing of the settings modal
             $("#settingsModal").on("hidden.bs.modal", function () {
-                initialized = false; // update the lowset/highest because the timezone setting might have changed
-                setup_data_and_items();
+                setup_items();
+                setup_item_buttons();
+                setup_polling();
             });
             // function to create setting toggle handlers
             function create_toggle_handler({ key, elementId, isNumber = false }) {
@@ -1213,21 +1197,14 @@
                     }
                 };
             }
-            const toggle_labels = create_toggle_handler({
-                key: "show.dateLabels",
-                elementId: "toggleLabels"
+            const toggle_polling_interval = create_toggle_handler({
+                key: "show.pollingInterval",
+                elementId: "togglePollingInterval",
+                isNumber: true
             });
             const toggle_legends = create_toggle_handler({
                 key: "show.legends",
                 elementId: "toggleLegends"
-            });
-            const toggle_aliases = create_toggle_handler({
-                key: "show.aliases",
-                elementId: "toggleAliases"
-            });
-            const toggle_milliseconds = create_toggle_handler({
-                key: "show.milliseconds",
-                elementId: "toggleMilliseconds"
             });
             const toggle_axis_titles = create_toggle_handler({
                 key: "show.axisTitles",
@@ -1237,41 +1214,24 @@
                 key: "show.animation",
                 elementId: "toggleAnimations"
             });
-            const toggle_animation_duration = create_toggle_handler({
-                key: "show.duration",
-                elementId: "toggleAnimationDuration",
-                isNumber: true
-            });
             const toggle_bar_rounding = create_toggle_handler({
                 key: "show.rounding",
                 elementId: "toggleBarRounding",
                 isNumber: true
             });
-            const toggle_timezone = create_toggle_handler({
-                key: "show.timezone",
-                elementId: "toggleTimezone"
-            })
 
             // Initial load
-            toggle_labels(true);
+            toggle_polling_interval(true);
             toggle_legends(true);
-            toggle_aliases(true);
-            toggle_milliseconds(true);
             toggle_axis_titles(true);
             toggle_animations(true);
-            toggle_animation_duration(true);
             toggle_bar_rounding(true);
-            toggle_timezone(true);
 
             // Add event listeners
-            document.getElementById("toggleLabels").addEventListener("click", () => toggle_labels());
+            document.getElementById("togglePollingInterval").addEventListener("click", () => toggle_polling_interval());
             document.getElementById("toggleLegends").addEventListener("click", () => toggle_legends());
-            document.getElementById("toggleAliases").addEventListener("click", () => toggle_aliases());
-            document.getElementById("toggleMilliseconds").addEventListener("click", () => toggle_milliseconds());
             document.getElementById("toggleAxisTitles").addEventListener("click", () => toggle_axis_titles());
             document.getElementById("toggleAnimations").addEventListener("click", () => toggle_animations());
-            document.getElementById("toggleAnimationDuration").addEventListener("change", () => toggle_animation_duration());
-            document.getElementById("toggleTimezone").addEventListener("change", () => toggle_timezone());
             document.getElementById("toggleBarRounding").addEventListener("change", () => toggle_bar_rounding());
             document.getElementById("themeLight").addEventListener("click", () => toggle_theme());
             document.getElementById("themeDark").addEventListener("click", () => toggle_theme());
@@ -1545,7 +1505,7 @@
                     ids: {
                         "github": githubLightSVG,
                         "settings": settingsLightSVG,
-                        "filters": filterLightSVG,
+                        // "filters": filterLightSVG,
                         "rflogo": rflogoLightSVG,
                         "themeLight": moonSVG,
                         "bug": bugLightSVG,
@@ -1593,7 +1553,7 @@
                     ids: {
                         "github": githubDarkSVG,
                         "settings": settingsDarkSVG,
-                        "filters": filterDarkSVG,
+                        // "filters": filterDarkSVG,
                         "rflogo": rflogoDarkSVG,
                         "themeDark": sunSVG,
                         "bug": bugDarkSVG,
@@ -1745,7 +1705,7 @@
             document.getElementById("customizeLayout").addEventListener("click", (e) => {
                 gridEditMode = !gridEditMode;
                 customize_layout();
-                setup_data_and_items();
+                setup_polling();
                 requestAnimationFrame(() => {
                     setup_edit_mode_icons(true);
                 })
@@ -1753,7 +1713,7 @@
             document.getElementById("saveLayout").addEventListener("click", (e) => {
                 gridEditMode = !gridEditMode;
                 save_layout()
-                setup_data_and_items();
+                setup_polling();
                 requestAnimationFrame(() => {
                     setup_edit_mode_icons(false);
                 })
@@ -1981,33 +1941,6 @@
                     if (typeof window[graphFunctionName] === "function") {
                         window[graphFunctionName]();
                     }
-
-                    if (fullscreenButton === "runDonut") {
-                        create_run_donut_total_graph();
-                    } else if (fullscreenButton === "suiteFolderDonut") {
-                        create_suite_folder_fail_donut_graph();
-                    }
-
-                    let section = null;
-                    if (fullscreenButton.includes("suite")) {
-                        section = "suite";
-                    } else if (fullscreenButton.includes("test")) {
-                        section = "test";
-                    } else if (fullscreenButton.includes("keyword")) {
-                        section = "keyword";
-                    } else if (fullscreenButton.includes("compare")) {
-                        section = "compare";
-                    }
-                    if (section) {
-                        const filters = document.getElementById(`${section}SectionFilters`);
-                        const originalContainer = document.getElementById(`${section}SectionFiltersContainer`);
-                        if (entering) {
-                            const fullscreenHeader = document.querySelector('.grid-stack-item-content.fullscreen');
-                            fullscreenHeader.insertBefore(filters, fullscreenHeader.firstChild);
-                        } else {
-                            originalContainer.appendChild(filters);
-                        }
-                    }
                 };
                 document.getElementById(fullscreenId).addEventListener("click", () => {
                     inFullscreenGraph = fullscreenId;
@@ -2067,6 +2000,10 @@
         let dashboardStatisticsChart;
 
         function create_dashboard_statistics_item() {
+            if (dashboardStatisticsChart) {
+                dashboardStatisticsChart.destroy();
+                dashboardStatisticsChart = null;
+            }
             const canvas = document.getElementById("dashboardStatisticsGraph");
             if (!canvas) return;
 
@@ -2092,24 +2029,18 @@
                 ],
             };
 
-            const config = {
+            const config = get_graph_config({
                 type: "bar",
                 data,
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: true },
-                    },
+                xTitle: "Status",
+                yTitle: "Count",
+                extraOptions: {
                     scales: {
                         x: { grid: { display: false } },
-                        y: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 },
-                        },
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
                     },
                 },
-            };
+            });
 
             dashboardStatisticsChart = new Chart(canvas, config);
             update_dashboard_statistics_item();
@@ -2193,6 +2124,14 @@
         let metricsCPUGraph, metricsRAMGraph;
 
         function create_metrics_item(canvasId, label) {
+            if (metricsCPUGraph && canvasId === "metricsCPUGraph") {
+                metricsCPUGraph.destroy();
+                metricsCPUGraph = null;
+            }
+            if (metricsRAMGraph && canvasId === "metricsRAMGraph") {
+                metricsRAMGraph.destroy();
+                metricsRAMGraph = null;
+            }
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
 
@@ -2201,11 +2140,7 @@
                 return;
             }
 
-            if (canvasId === "metricsCPUGraph" && metricsCPUGraph) return;
-            if (canvasId === "metricsRAMGraph" && metricsRAMGraph) return;
-
             const COLORS = [passedBackgroundColor, skippedBackgroundColor, failedBackgroundColor];
-
             function index(perc) {
                 return perc < 40 ? 0 : perc < 80 ? 1 : 2;
             }
@@ -2213,7 +2148,7 @@
             const data = {
                 datasets: [
                     {
-                        data: [0, 100], // placeholder, will be set in update
+                        data: [1, 99], // avoid starting at [0,100]
                         backgroundColor(ctx) {
                             if (ctx.type !== "data") return;
                             return ctx.index === 1
@@ -2226,39 +2161,39 @@
 
             const annotation = {
                 type: "doughnutLabel",
-                content: ({ chart }) => [
-                    chart.data.datasets[0].data[0].toFixed(2) + " %",
-                    label,
-                ],
+                content: ({ chart }) => {
+                    const val = chart.data.datasets[0].data[0];
+                    if (!val || isNaN(val)) return ["-- %", label]; // fallback
+                    return [val.toFixed(2) + " %", label];
+                },
                 drawTime: "beforeDraw",
                 position: { y: "-50%" },
                 font: [{ size: 50, weight: "bold" }, { size: 20 }],
-                color: ({ chart }) => [
-                    COLORS[index(chart.data.datasets[0].data[0])],
-                    "grey",
-                ],
-            };
-
-            const config = {
-                type: "doughnut",
-                data,
-                options: {
-                    aspectRatio: 2,
-                    circumference: 180,
-                    rotation: -90,
-                    plugins: {
-                        legend: { display: false },
-                        annotation: { annotations: { annotation } },
-                    },
+                color: ({ chart }) => {
+                    const val = chart.data.datasets[0].data[0];
+                    return val ? [COLORS[index(val)], "grey"] : ["grey", "grey"];
                 },
             };
 
+            const config = get_graph_config({
+                type: "doughnut",
+                data,
+                annotation,
+                extraOptions: {
+                    aspectRatio: 2,
+                    circumference: 180,
+                    rotation: -90,
+                },
+            });
+
             if (canvasId === "metricsCPUGraph") {
                 metricsCPUGraph = new Chart(canvas, config);
-                update_metrics_item(canvasId);
+                metricsCPUGraph.resize(); // ensure dimensions are recalculated
+                requestAnimationFrame(() => update_metrics_item(canvasId));
             } else if (canvasId === "metricsRAMGraph") {
                 metricsRAMGraph = new Chart(canvas, config);
-                update_metrics_item(canvasId);
+                metricsRAMGraph.resize(); // ensure dimensions are recalculated
+                requestAnimationFrame(() => update_metrics_item(canvasId));
             }
         }
 
@@ -2318,9 +2253,78 @@
             });
         }
 
+        function get_graph_config({
+            type,
+            data,
+            xTitle = "",
+            yTitle = "",
+            annotation = null,
+            extraOptions = {}
+        }) {
+            const config = {
+                type,
+                data,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        tooltip: { enabled: true },
+                        legend: { display: settings.show.legends ?? false },
+                    },
+                    ...extraOptions,
+                },
+            };
+
+            // Handle animations
+            if (settings.show.animation !== undefined) {
+                config.options.animation = settings.show.animation;
+            }
+
+            // Axis titles (only for charts with scales, e.g. bar/line)
+            if (["bar", "line"].includes(type) && settings.show.axistitles) {
+                config.options.scales = {
+                    x: {
+                        title: { display: !!xTitle, text: xTitle },
+                        ...(extraOptions.scales?.x || {}),
+                    },
+                    y: {
+                        title: { display: !!yTitle, text: yTitle },
+                        ...(extraOptions.scales?.y || {}),
+                    },
+                };
+            }
+
+            // Bar rounding
+            if (type === "bar" && settings.show.rounding) {
+                if (config.data?.datasets) {
+                    config.data.datasets.forEach(ds => {
+                        ds.borderRadius = settings.show.rounding;
+                    });
+                }
+            }
+
+            // Doughnut chart annotation support
+            if (type === "doughnut" && annotation) {
+                config.options.plugins.annotation = { annotations: { annotation } };
+            }
+
+            return config;
+        }
+
+
         ////////////////////
         // MAIN FUNCTIONS //
         ////////////////////
+
+        // function to setup the buttons/filters on the section rows
+        function setup_section_buttons() {
+            const dashboardReset = document.getElementById("removeDashboardData")
+            const metricsReset = document.getElementById("removeMetricsData")
+            const logsReset = document.getElementById("removeLogsData")
+
+            dashboardReset.addEventListener("click", clear_events)
+            metricsReset.addEventListener("click", clear_metrics)
+            logsReset.addEventListener("click", clear_logs)
+        }
 
         // function to update the section (menu) buttons with the correct eventlisteners
         // also sets up the automatic highlighting of the section that is most visible in the top
@@ -2437,6 +2441,7 @@
             setup_information_popups();
             setup_layout();
             setup_section_menu_buttons();
+            setup_section_buttons();
             setup_spinner(false); // show spinner
             await setup_first_data();
             await setup_polling();
