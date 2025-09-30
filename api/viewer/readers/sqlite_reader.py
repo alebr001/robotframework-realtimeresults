@@ -45,6 +45,12 @@ class SqliteReader(Reader):
     def _get_app_logs(self) -> List[Dict]:
         return self._fetch_all_as_dicts(sql_definitions.SELECT_ALL_APP_LOGS)
 
+    def _get_rf_logs(self) -> List[Dict]:
+        return self._fetch_all_as_dicts(sql_definitions.SELECT_ALL_RF_LOGS)
+
+    def _get_metrics(self) -> List[Dict]:
+        return self._fetch_all_as_dicts(sql_definitions.SELECT_ALL_METRICS)
+
     def _clear_events(self) -> None:
         conn, should_close = self._get_connection()
         try:
