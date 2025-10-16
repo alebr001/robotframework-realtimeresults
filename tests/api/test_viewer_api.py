@@ -18,14 +18,18 @@ class DummyReader:
                 "level": "INFO"
             }
         ]
-        self._logs = [{"level": "INFO", "message": "Dummy log"}]
+        self._app_logs = [{"level": "INFO", "message": "Dummy log"}]
+        self._rf_logs = [{"level": "INFO", "message": "Dummy rf log"}]
         self._cleared = False
 
     def get_events(self):
         return [] if self._cleared else self._events
 
     def get_app_logs(self):
-        return self._logs
+        return self._app_logs
+    
+    def get_rf_logs(self):
+        return self._rf_logs
 
     def clear_events(self):
         self._cleared = True
@@ -38,9 +42,8 @@ def client():
     yield TestClient(app)
 
 
-
-def test_get_applog(client):
-    response = client.get("/applog")
+def test_get_app_logs(client):
+    response = client.get("/logs")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
     assert response.json()[0]["message"] == "Dummy log"
