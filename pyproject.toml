@@ -5,6 +5,7 @@ description = "Realtime Robot Framework listener with FastAPI backend and Loki i
 authors = ["Jurgen Alebregtse <j.alebregtse@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+url="https://github.com/alebr001/robotframework-realtimeresults"
 packages = [
     { include = "api" },
     { include = "dashboard" },
