@@ -7,60 +7,13 @@ import logging
 import platform
 import time
 import socket
-from pathlib import Path
+from shared.helpers.arg_parser import parse_args
 from shared.helpers.config_loader import load_config
 from robot.running.builder import TestSuiteBuilder
 from shared.helpers.logger import setup_root_logging
 from shared.helpers.setup_wizard import run_setup_wizard
-from shared.helpers.kill_backend import kill_backend
 
 logger = logging.getLogger("rt-cli")
-
-def parse_args():
-    """Simple manual parsing to support --runservice and --config."""
-    service_name = None
-    config_path = None
-    robot_args = []
-
-    if "--setup" in sys.argv:
-        logger.info("Running setup wizard.")
-        run_setup_wizard()
-        
-    if any(arg in sys.argv for arg in ["--runservice", "--run", "--start"]):
-        runservice_index = sys.argv.index("--runservice")
-        service_name = sys.argv[runservice_index + 1]
-
-    if any(arg in sys.argv for arg in ["--killbackend", "--kill_backend", "--kill"]):
-        logger.info("Stopping local backend services for rt-robot.")
-        kill_backend()
-        sys.exit(0)
-
-    if "--help" in sys.argv or "-h" in sys.argv:
-        logger.info(
-            "Usage: python cli.py [options] [robot arguments]\n"
-            "Options:\n"
-            "  --help, -h           Show this help message and exit\n"
-            "  --setup              Create new configfile\n"
-            "  --runservice NAME    Start a single backend service (viewer, ingest, combined)\n"
-            "  --config PATH        Use a custom config file\n"
-            "  --killbackend        Stop all backend services\n"
-            "\n"
-            "All other arguments are passed to Robot Framework.\n"
-            "Examples:\n"
-            "  rt-robot --runservice api.viewer.main:app --config myconfig.json\n"
-            "  rt-robot --config myconfig.json --outputdir examples/results/ --debugfile debug.log tests/\n"
-        )
-        sys.exit(0)
-
-    if "--config" in sys.argv:
-        config_index = sys.argv.index("--config")
-        config_path = sys.argv[config_index + 1]
-        robot_args = sys.argv[1:config_index] + sys.argv[config_index + 2:]
-    else:
-        config_path = "realtimeresults_config.json"
-        robot_args = sys.argv[1:]
-
-    return service_name, Path(config_path), robot_args
 
 def get_command(appname: str, config: dict) -> list[str]:
     if appname.endswith(".py"):
@@ -208,20 +161,26 @@ def count_tests(path):
         return 0
 
 def main():
-    service_name, config_path, robot_args = parse_args()
+    setup_root_logging("info")
+
+    service_name, config_path, config_overrides, robot_args = parse_args()
 
     if not config_path.exists():
         logger.info(f"No config found at {config_path}. Launching setup wizard...")
         if not run_setup_wizard(config_path):
-            logger.info("Setup completed. Please re-run this command.")
+            logger.info("Setup completed. Please re-run the command.")
             sys.exit(0)
 
     config = load_config(config_path)
 
+    if config_overrides:
+        logger.debug(f"Applying CLI overrides: {config_overrides}")
+        logger.warning("Overriding config values from command line arguments.")
+        config.update(config_overrides)
+
     setup_root_logging(config.get("log_level", "info"))
     if lvl := config.get("log_level_cli"):
         logger.setLevel(getattr(logging, lvl.upper(), logging.INFO))
-
 
     # set up environment variable for config path
     env = os.environ.copy()
@@ -239,15 +198,17 @@ def main():
 
     test_path = robot_args[-1] if robot_args else "tests/"
     total = count_tests(test_path)
-    logger.info(f"Starting testrun. Total tests: {total}")
 
     if config.get("enable_auto_services", False):
         logger.debug("Auto services are enabled.")
         # also inject all env vars (incl config path) into the subprocesses
         pids = start_services(config, env=env)
     else:
-        logger.debug("Auto services are disabled. You need to start the backend services manually.")
+        logger.warning("Auto services are disabled. You need to start the backend services manually.")
         pids = {}
+
+    logger.info(f"Starting testrun. Total tests: {total}")
+
 
     logger.debug(f"Viewer Backend: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}")
     logger.debug(f"Viewer CLient: http://{config.get('viewer_client_host', '127.0.0.1')}:{config.get('viewer_client_port', 8002)}")

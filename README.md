@@ -135,10 +135,10 @@ rt-robot --killbackend
 
 ```bash
 # Terminal 1
-rt-robot --runservice api.ingest.main:app --config config.json
+rt-robot --runservice api.ingest.main:app --configfile config.json
 
 # Terminal 2
-rt-robot --runservice api.viewer.main:app --config config.json
+rt-robot --runservice api.viewer.main:app --configfile config.json
 
 # Terminal 3
 rt-robot --runservice producers/log_producer/log_tails.py
