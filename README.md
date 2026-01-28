@@ -179,7 +179,7 @@ rt-robot --config config.json tests/
 ```json
 {
   "listener_sink_type": "http",
-  "database_url": "sqlite:///eventlog.db, sqlite:///inmemory, postgresql://realtime:realtimepass@db:5432/realtime_db, etc",
+  "database_url": "sqlite:///eventlog.db, postgresql://realtime:realtimepass@db:5432/realtime_db, etc",
   "viewer_backend_host": "127.0.0.1",
   "viewer_backend_port": 8002,
   "ingest_backend_host": "127.0.0.1",
