@@ -51,7 +51,6 @@ rf_log_columns = [
     ("level", "TEXT"),
     ("message", "TEXT"),
     ("html", "TEXT"),
-    ("source", "TEXT"),
 ]
 
 # === Application Logs Table ===

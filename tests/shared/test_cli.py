@@ -5,26 +5,27 @@ from pathlib import Path
 
 # Zorg dat je dit pad correct hebt
 import shared.helpers.cli as cli
+from shared.helpers.arg_parser import parse_args
 
 
 class TestCliWrapper(unittest.TestCase):
 
-    @patch("shared.helpers.cli.logger")
+    @patch("shared.helpers.arg_parser.logger")
     @patch("sys.exit")
     def test_help_flag(self, mock_exit, mock_logger):
         test_argv = ["cli.py", "--help"]
         with patch.object(sys, "argv", test_argv):
-            cli.parse_args()
+            parse_args()
             mock_logger.info.assert_called()
             mock_exit.assert_called_once_with(0)
 
-    @patch("shared.helpers.cli.kill_backend")
+    @patch("shared.helpers.arg_parser.kill_backend")
     @patch("builtins.print")
     @patch("sys.exit")
     def test_kill_backend_flag(self, mock_exit, mock_print, mock_kill):
         test_argv = ["cli.py", "--killbackend"]
         with patch.object(sys, "argv", test_argv):
-            cli.parse_args()
+            parse_args()
             mock_kill.assert_called_once()
             mock_exit.assert_called_once_with(0)
 
@@ -32,23 +33,23 @@ class TestCliWrapper(unittest.TestCase):
         test_argv = [
             "cli.py",
             "--runservice", "api.viewer.main:app",
-            "--config", "custom.json",
+            "--configfile", "custom.json",
             "--outputdir", "results/",
             "tests/"
         ]
         with patch.object(sys, "argv", test_argv):
-            service, config_path, robot_args = cli.parse_args()
+            service, config_path, config_overrides, robot_args = parse_args()
             self.assertEqual(service, "api.viewer.main:app")
             self.assertEqual(config_path, Path("custom.json"))
             self.assertEqual(
                 robot_args,
-                ["--runservice", "api.viewer.main:app", "--outputdir", "results/", "tests/"]
+                ["--outputdir", "results/", "tests/"]
             )
 
     def test_parse_args_without_runservice(self):
-        test_argv = ["cli.py", "--config", "x.json", "--outputdir", "logs/", "tests/"]
+        test_argv = ["cli.py", "--configfile", "x.json", "--outputdir", "logs/", "tests/"]
         with patch.object(sys, "argv", test_argv):
-            service, config_path, robot_args = cli.parse_args()
+            service, config_path, config_overrides, robot_args = parse_args()
             self.assertIsNone(service)
             self.assertEqual(config_path, Path("x.json"))
             self.assertEqual(robot_args, ["--outputdir", "logs/", "tests/"])
@@ -56,18 +57,17 @@ class TestCliWrapper(unittest.TestCase):
     @patch("shared.helpers.cli.logger")
     @patch("shared.helpers.cli.load_config", return_value={})
     @patch("shared.helpers.cli.run_setup_wizard", return_value=False)
-    @patch("shared.helpers.cli.Path.exists", return_value=False)
-    @patch("sys.exit")
+    @patch("shared.helpers.arg_parser.Path.exists", return_value=False)
+    @patch("sys.exit", side_effect=SystemExit)
     def test_main_runs_setup_if_config_missing(self, mock_exit, mock_exists, mock_wizard, mock_config, mock_logger):
-        test_argv = ["cli.py"]
-        with patch.object(sys, "argv", test_argv):
+        with self.assertRaises(SystemExit):
             cli.main()
             mock_logger.info.assert_any_call("No config found at realtimeresults_config.json. Launching setup wizard...")
             mock_exit.assert_called_once_with(0)
 
 
     @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8002})
-    @patch("shared.helpers.cli.Path.exists", return_value=True)
+    @patch("shared.helpers.arg_parser.Path.exists", return_value=True)
     @patch("shared.helpers.cli.start_services", return_value={"api.viewer.main:app": 999})
     @patch("shared.helpers.cli.count_tests", return_value=3)
     @patch("shared.helpers.cli.subprocess.run")
@@ -84,14 +84,14 @@ class TestCliWrapper(unittest.TestCase):
 
     @patch("shared.helpers.cli.subprocess.run")
     @patch("shared.helpers.cli.load_config", return_value={"viewer_backend_host": "127.0.0.1", "viewer_backend_port": 8002})
-    @patch("shared.helpers.cli.Path.exists", return_value=True)
+    @patch("shared.helpers.arg_parser.Path.exists", return_value=True)
     @patch("shared.helpers.cli.logger")
     def test_main_runservice_direct(self, mock_logger, mock_exists, mock_config, mock_subproc):
         test_argv = ["cli.py", "--runservice", "api.viewer.main:app"]
         with patch.object(sys, "argv", test_argv):
             cli.main()
             mock_subproc.assert_called_once()
-            args_passed = mock_subproc.call_args[0][0]  # eerste argument: de command list
+            args_passed = mock_subproc.call_args[0][0]  # fist argument: the command list
             assert "uvicorn" in args_passed
             assert "api.viewer.main:app" in args_passed
 

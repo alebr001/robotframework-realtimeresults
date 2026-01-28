@@ -27,7 +27,7 @@ def generate_event_type_from_path(path: str) -> str:
     return filename.replace(".", "_")
 
 
-def run_setup_wizard(config_path: Path = None):
+def run_setup_wizard(config_path: Path = Path("realtimeresults_config.json")) -> bool:
     try:
         print("Welcome to the RealtimeResults setup wizard.")
         print("This wizard will help you generate a realtime config file.")
