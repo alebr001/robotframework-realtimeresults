@@ -43,6 +43,36 @@ event_columns = [
     ("tags", "TEXT"),
 ]
 
+# === RF Log Messages Table ===
+rf_log_columns = [
+    ("event_type", "TEXT"),
+    ("testid", "TEXT"),
+    ("timestamp", "TEXT"),
+    ("level", "TEXT"),
+    ("message", "TEXT"),
+    ("html", "TEXT"),
+]
+
+# === Application Logs Table ===
+app_log_columns = [
+    ("timestamp", "TEXT"),
+    ("event_type", "TEXT"),
+    ("source", "TEXT"),
+    ("message", "TEXT"),
+    ("level", "TEXT"),
+]
+
+# === Metrics Table ===
+metric_columns = [
+    ("timestamp", "TEXT"),
+    ("metric_name", "TEXT"),
+    ("value", "REAL"),
+    ("unit", "TEXT"),
+    ("source", "TEXT"),
+]
+
+### EVENTS ###
+
 CREATE_EVENTS_TABLE = f"""
 CREATE TABLE IF NOT EXISTS events (
     {ID_FIELD},
@@ -63,15 +93,7 @@ ORDER BY COALESCE(starttime, endtime) ASC
 
 DELETE_ALL_EVENTS = "DELETE FROM events"
 
-# === RF Log Messages Table ===
-rf_log_columns = [
-    ("event_type", "TEXT"),
-    ("testid", "TEXT"),
-    ("timestamp", "TEXT"),
-    ("level", "TEXT"),
-    ("message", "TEXT"),
-    ("html", "TEXT"),
-]
+### RF-LOG MESSAGES ###
 
 CREATE_RF_LOG_MESSAGE_TABLE = f"""
 CREATE TABLE IF NOT EXISTS rf_log_messages (
@@ -91,14 +113,9 @@ FROM rf_log_messages
 ORDER BY timestamp ASC
 """
 
-# === Application Logs Table ===
-app_log_columns = [
-    ("timestamp", "TEXT"),
-    ("event_type", "TEXT"),
-    ("source", "TEXT"),
-    ("message", "TEXT"),
-    ("level", "TEXT"),
-]
+DELETE_ALL_RF_LOGS = "DELETE FROM rf_log_messages"
+
+### APPLICATION LOGS ###
 
 CREATE_APP_LOG_TABLE = f"""
 CREATE TABLE IF NOT EXISTS app_logs (
@@ -120,14 +137,8 @@ ORDER BY timestamp ASC
 
 DELETE_ALL_APP_LOGS = "DELETE FROM app_logs"
 
-# === Metrics Table ===
-metric_columns = [
-    ("timestamp", "TEXT"),
-    ("metric_name", "TEXT"),
-    ("value", "REAL"),
-    ("unit", "TEXT"),
-    ("source", "TEXT"),
-]
+
+### METRICS ###
 
 CREATE_METRIC_TABLE = f"""
 CREATE TABLE IF NOT EXISTS metrics (
@@ -146,3 +157,5 @@ SELECT {', '.join(name for name, _ in metric_columns)}
 FROM metrics
 ORDER BY timestamp ASC
 """
+
+DELETE_ALL_METRICS = "DELETE FROM metrics"

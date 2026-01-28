@@ -19,7 +19,13 @@ def get_create_statements():
 
 def ensure_schema(database_url):
     if database_url.startswith("postgresql://"):
-        conn = psycopg2.connect(database_url)
+        try:
+            conn = psycopg2.connect(database_url)
+        except psycopg2.OperationalError as e:
+            raise RuntimeError(
+                "Cannot connect to PostgreSQL. "
+                "Is the database server running and is the URL correct?"
+            ) from e    
         try:
             with conn:
                 with conn.cursor() as cursor:
@@ -36,7 +42,14 @@ def ensure_schema(database_url):
 
 async def async_ensure_schema(database_url):
     if database_url.startswith("postgresql://"):
-        conn = await asyncpg.connect(database_url)
+        try:
+            conn = await asyncpg.connect(database_url)
+        except asyncpg.PostgresError as e:
+            raise RuntimeError(
+                "Cannot connect to PostgreSQL. "
+                "Is the database server running and is the URL correct?"
+            ) from e
+
         try:
             for statement in get_create_statements():
                 await conn.execute(statement)

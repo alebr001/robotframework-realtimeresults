@@ -10,17 +10,21 @@ from api.viewer.readers.sqlite_reader import SqliteReader
 from api.viewer.readers.postgres_reader import PostgresReader
 from api.viewer.app_factory import create_app
 
-from fastapi import Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from datetime import datetime, timezone
 
 from api.viewer.app_factory import create_app
 
 config = load_config()
-ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
 setup_root_logging(config.get("log_level", "info"))
 logger = logging.getLogger("rt.api.viewer")
+
+try:
+    ensure_schema(config.get("database_url", "sqlite:///eventlog.db"))
+except RuntimeError as e:
+    logger.error(str(e))
+    sys.exit(1)
 
 component_level_logging = config.get("log_level_cli")
 if component_level_logging:

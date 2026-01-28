@@ -48,8 +48,9 @@ def parse_known_datetime_formats(text: str, tz_info: str = "Europe/Amsterdam") -
 
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=ZoneInfo(tz_info))
+                else:
+                    dt = dt.astimezone(ZoneInfo(tz_info))
 
-                dt = dt.astimezone()
                 iso = dt.isoformat(timespec="microseconds")
                 return iso, text.replace(raw, "").strip()
 
