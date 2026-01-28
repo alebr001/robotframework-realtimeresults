@@ -144,7 +144,7 @@ rt-robot --runservice api.viewer.main:app --configfile config.json
 rt-robot --runservice producers/log_producer/log_tails.py
 
 # Terminal 4 (optional)
-rt-robot --runservice python producers/metrics/metric_scraper.py
+rt-robot --runservice producers/metrics/metric_scraper.py
 ```
 
 ### Docker Usage
