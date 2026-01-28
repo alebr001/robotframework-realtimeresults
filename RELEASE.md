@@ -32,7 +32,7 @@ and GitHub Releases.
    package to PyPI
 
 
-![Gitflow workflow diagram](https://miro.medium.com/v2/resize:fit:1100/format:webp/1*9yJY7fyscWFUVRqnx0BM6A.png)
+![Gitflow workflow diagram](https://miro.medium.com/v2/resize:fit:550/format:webp/1*9yJY7fyscWFUVRqnx0BM6A.png)
 
 *Source:*  
 *Gitflow Workflow – Continuous Integration & Continuous Delivery*  
