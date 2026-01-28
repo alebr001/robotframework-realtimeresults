@@ -227,11 +227,11 @@ def main():
         logger.warning("Test run interrupted by user")
         # sys.exit(130)
 
-    logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
     for name, pid in pids.items():
         logger.info(f"Service {name} started with PID {pid}")
     
     if config.get("enable_auto_services", True):
+        logger.info(f"Testrun finished. Dashboard: http://{config.get('viewer_backend_host', '127.0.0.1')}:{config.get('viewer_backend_port', 8002)}/dashboard")
         logger.info("Run 'rt-robot --killbackend' to stop background processes.")
 
 if __name__ == "__main__":
