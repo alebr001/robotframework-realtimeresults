@@ -47,6 +47,7 @@ class RealTimeResults:
         self.config = {**file_config, **cli_config}
 
         self.listener_sink_type = self.config.get("listener_sink_type", "none").lower()
+        self.logger.debug(f"Listener sink type: {self.listener_sink_type}")
         self.total_tests = int(cli_config.get("totaltests", 0))
         self.current_test_id = None
         endpoint = ""
@@ -55,12 +56,14 @@ class RealTimeResults:
                 host = self.config.get("ingest_client_host", self.config.get("ingest_backend_host", "127.0.0.1"))
                 port = self.config.get("ingest_client_port", self.config.get("ingest_backend_port", "8001"))
                 endpoint = f"http://{host}:{port}"
+                self.logger.debug(f"Initializing HTTP sink with endpoint: {endpoint}")
                 self.sink = HttpSink(endpoint=endpoint)
 
             elif self.listener_sink_type == "sqlite":
                 database_url = self.config.get("database_url", "none")
                 if database_url.startswith("sqlite:///"):
                     self.sink = SqliteSink(database_url=database_url)
+                    self.logger.debug(f"Initializing SQLite sink with database URL: {database_url}")
                 else:
                     raise ValueError(f"Unsupported database_url for sync: {database_url}")
 
